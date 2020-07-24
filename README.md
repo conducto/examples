@@ -6,3 +6,6 @@ This repo contains the Conducto pipelines that are referenced by [the docs](http
 
 - [Hello Py](./hello_py/)
 - [Hello PyJs](./hello_py_js/)
+- [Hello Git](./hello_git/)
+- [Hello Native](./hello_native/)
+- [Hello Dockerfile](./hello_dockerfile/)
