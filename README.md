@@ -12,4 +12,6 @@ This repo contains the Conducto pipelines that are referenced by [the docs](http
 - [Hello Git](./hello_git/)
 - [Hello Native](./hello_native/)
 - [Hello Dockerfile](./hello_dockerfile/)
+- [stop_on_error](./stop_on_error/)
+- [Tree Syntax](./tree_syntax/)
 - [Fortune (messy)](./fortune_messy/)
