@@ -2,7 +2,7 @@ import conducto as co
 
 # five randomly generated payloads
 # ranging in size from 50m to 250m
-payloads = co.Image(dockerfile='Dockerfile')
+payloads = co.Image(dockerfile='Dockerfile', context='.')
 
 def go() -> co.Parallel:
     with co.Serial(image=payloads, cpu=2) as root:
@@ -23,4 +23,5 @@ def go() -> co.Parallel:
     return root
 
 if __name__ == "__main__":
+    co.Image.register_directory("CONDUCTO_DEMO", ".")
     co.main(default=go)

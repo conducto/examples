@@ -3,9 +3,10 @@
 This example performs the same workload twice.
   - five threads in one container
   - singly in five containers
+  - sequentially in one container
 
+The idea is that the user can tweak cpu availability to alter who wins the race.
 
-The idea is that the user can tweak cpu allocation to alter who wins the race
 
 ### To Run
 
