@@ -20,8 +20,14 @@ def go() -> co.Parallel:
         # compress five files in a row
         co.Exec('gzip -1 payload*.dat', name="no parallelism")
 
+
     return root
 
 if __name__ == "__main__":
-    co.Image.register_directory("CONDUCTO_DEMO", ".")
+
+    # needed for --cloud
+    # hopefully we can infer this from 'context=' above
+    # once that happens it can be removed
+    co.Image.register_directory("conducto_examples", "..")
+
     co.main(default=go)
