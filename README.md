@@ -7,6 +7,7 @@ TODO: make this public
 
 This repo contains the Conducto pipelines that are referenced by [the docs](https://conducto.com/docs).
 
+- [Hello World](./hello_world/)
 - [Hello Py](./hello_py/)
 - [Hello PyJs](./hello_py_js/)
 - [Hello Git](./hello_git/)
@@ -15,3 +16,4 @@ This repo contains the Conducto pipelines that are referenced by [the docs](http
 - [stop_on_error](./stop_on_error/)
 - [Tree Syntax](./tree_syntax/)
 - [Fortune (messy)](./fortune_messy/)
+- [Compression Race](./compression_race/)
