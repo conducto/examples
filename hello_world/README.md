@@ -1,4 +1,4 @@
-# hello_py
+# hello_world
 
 A two-node hello world, says:
 
