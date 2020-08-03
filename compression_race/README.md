@@ -1,6 +1,6 @@
 # Compression Race
 
-This example performs the same workload twice.
+This example performs the same workload three times.
   - five threads in one container
   - singly in five containers
   - sequentially in one container
