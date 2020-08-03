@@ -8,7 +8,7 @@ def pipeline() -> co.Serial:
     root = co.Serial()
     root["hello from python"] = co.Exec(f"python -c '{py_code}'")
     root["world from javascript"] = co.Exec(f"echo '{js_code}' | node -",
-                                            image="node:14.7.0-alpine3.11"
+                                            image="node:current-alpine"
     )
     return root
 
