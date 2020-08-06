@@ -1,16 +1,12 @@
 import conducto as co
 
-# highlight-start
 from cowpy.cow import Moose
 
 img = co.Image(image="python:3.8-alpine", reqs_py=["conducto", "cowpy"], copy_dir=".")
-# highlight-end
 
 
 def say_it():
-    # highlight-start
     print(Moose().milk("Hello World"))
-    # highlight-end
 
 
 def hello() -> co.Serial:
