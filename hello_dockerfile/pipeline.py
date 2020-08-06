@@ -4,7 +4,7 @@ img = co.Image(dockerfile="Dockerfile")
 
 def hello() -> co.Serial:
     with co.Serial(image=img) as pipeline:
-        pipeline["Say Hi"] = co.Exec("pokemonsay -pn Oddish 'Hi'")
+        pipeline["Say Hi"] = co.Exec("pokemonsay -n -p Oddish 'Hi'")
     return pipeline
 
 if __name__ == "__main__":
