@@ -1,10 +1,18 @@
 # hello_py
 
-A repo-sourced hello world
+A repo-sourced hello world, with and without a local path mapping.
 
 ### To Run
 
+Without `path_map`
+
     python ./pipeline.py --local
+
+With `path_map`
+
+    python ./pathmap.py --local
+
+Note how contents of [./local-copy](./local_copy) resemble the contents of https://github.com/leachim6/hello-world.
 
 ### Related
 
