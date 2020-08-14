@@ -1,14 +1,26 @@
-# Same Container
+# Container Reuse
 
 This example uses one increments a number in a file in one node and checks to see if it was incremented in the next node.
 Altering co.SameContainer will affect whether the updated value makes it to the next node.
 
 
-### To Run With 3 jobs
+### A Potentially Surprising Result
 
-    python ./increment.py serial --local --run
+    python ./increment.py default_serial --local --run
 
-### To Run With n jobs
+### Isolate Container Reuse
+
+    python ./increment.py fixed_serial --local --run
+
+### Isolate Further
+
+    python ./increment.py isolated_serial --local --run
+
+### Escape a Reuse Domain
+
+    python ./increment.py escaped_serial --local --run
+
+### Run in Parallel With _n_ jobs
 
 (where n = 5)
 

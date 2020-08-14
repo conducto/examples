@@ -12,4 +12,4 @@ This repo contains the Conducto pipelines that are referenced by [the docs](http
 - [Tree Syntax](./tree_syntax/)
 - [Fortune (messy)](./fortune_messy/)
 - [Compression Race](./compression_race/)
-- [Same Container](./same_container/)
+- [Container Lifetime](./container_lifetime/)
