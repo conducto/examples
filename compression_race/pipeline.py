@@ -14,7 +14,7 @@ def go() -> co.Parallel:
                 co.Exec(
                     f"gzip -1 payload{i + 1}.dat",
                     name=f"worker {str(i)}",
-                    same_container=co.SameContainer.NEW,
+                    container_reuse_context=co.ContainerReuseContext.NEW,
                 )
 
         # use five threads to compress five files
@@ -24,7 +24,7 @@ def go() -> co.Parallel:
         co.Exec(
             "ls ; gzip -1 payload*.dat",
             name="no parallelism",
-            same_container=co.SameContainer.NEW,
+            container_reuse_context=co.ContainerReuseContext.NEW,
         )
 
     return root

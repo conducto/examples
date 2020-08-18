@@ -52,17 +52,17 @@ def nodes(n, t=0, new_each=False, rand=False):
     # increment the contents of a file, with a delay
     for i in range(1, n + 1):
         if new_each:
-            co.Exec(inc_sleep(rand), name=f"{i}", same_container=co.SameContainer.NEW)
+            co.Exec(inc_sleep(rand), name=f"{i}", container_reuse_context=co.ContainerReuseContext.NEW)
         else:
             co.Exec(inc_sleep(rand), name=f"{i}")
 
     # test if the expected value is found
     if new_each:
-        co.Exec(test(i), name=f"={i}?", same_container=co.SameContainer.NEW)
+        co.Exec(test(i), name=f"={i}?", container_reuse_context=co.ContainerReuseContext.NEW)
     else:
         co.Exec(test(i), name=f"={i}?")
 
-# explores how same_container works among Parallel nodes
+# explores how container_reuse_context works among Parallel nodes
 def parallel(n_str) -> co.Parallel:
 
     n = int(n_str)
@@ -70,14 +70,14 @@ def parallel(n_str) -> co.Parallel:
     with co.Serial(stop_on_error=False) as root:
         with co.Parallel(name="unset"):
             nodes(n, rand=True)
-        with co.Parallel(name="new parent", same_container=co.SameContainer.NEW):
+        with co.Parallel(name="new parent", container_reuse_context=co.ContainerReuseContext.NEW):
             nodes(n, rand=True)
         with co.Parallel(name="new children"):
             nodes(n, new_each=True, rand=True)
 
     return root
 
-# same_container not specified, passive reuse might be unexpected
+# container_reuse_context not specified, passive reuse might be unexpected
 def default_serial() -> co.Parallel:
 
     with co.Serial(stop_on_error=False) as root:
@@ -88,18 +88,18 @@ def default_serial() -> co.Parallel:
 
     return root
 
-# same_container used to prevent unexpected reuse, but preserve expected reuse
+# container_reuse_context used to prevent unexpected reuse, but preserve expected reuse
 def fixed_serial() -> co.Parallel:
 
     with co.Serial(stop_on_error=False) as root:
-        with co.Serial(name="first", same_container=co.SameContainer.NEW):
+        with co.Serial(name="first", container_reuse_context=co.ContainerReuseContext.NEW):
             nodes(n)
-        with co.Serial(name="second", same_container=co.SameContainer.NEW):
+        with co.Serial(name="second", container_reuse_context=co.ContainerReuseContext.NEW):
             nodes(n)
 
     return root
 
-# same_container used to prevent any reuse
+# container_reuse_context used to prevent any reuse
 def isolated_serial() -> co.Parallel:
 
     with co.Serial(stop_on_error=False) as root:
@@ -109,14 +109,14 @@ def isolated_serial() -> co.Parallel:
 
     return root
 
-# explores how same_container's ESCAPE option works
+# explores how container_reuse_context's GLOBAL option works
 def nested() -> co.Parallel:
 
     with co.Parallel() as root:
         nodes(n) # global by default
-        with co.Serial(name="local", same_container=co.SameContainer.NEW):
+        with co.Serial(name="local", container_reuse_context=co.ContainerReuseContext.NEW):
             nodes(n)
-            with co.Serial(name="nested global", same_container=co.SameContainer.ESCAPE):
+            with co.Serial(name="nested global", container_reuse_context=co.ContainerReuseContext.GLOBAL):
                 nodes(n)
 
     return root

@@ -13,7 +13,7 @@ def _add_nodes(parent, n):
         parent[child_name] = co.Exec(
             f"gzip -1 payload{(i % 5) + 1}.dat",
             cpu=1,
-            same_container=co.SameContainer.NEW,
+            container_reuse_context=co.ContainerReuseContext.NEW,
         )
 
 

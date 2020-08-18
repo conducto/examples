@@ -1,7 +1,7 @@
 # Container Reuse
 
 This example uses one increments a number in a file in one node and checks to see if it was incremented in the next node.
-Altering co.SameContainer will affect whether the updated value makes it to the next node.
+Setting the container_reuse_context kwarg will affect whether the updated value makes it to the next node.
 
 
 ### A Potentially Surprising Result
@@ -16,9 +16,9 @@ Altering co.SameContainer will affect whether the updated value makes it to the 
 
     python ./increment.py isolated_serial --local --run
 
-### Escape a Reuse Domain
+### Escape a Local Reuse Domain
 
-    python ./increment.py escaped_serial --local --run
+    python ./increment.py nested  --local --run
 
 ### Run in Parallel With _n_ jobs
 
