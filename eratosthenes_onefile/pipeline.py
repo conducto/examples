@@ -9,14 +9,26 @@ def seive(n: int):
     first_prime = 3 # this isn't true
 
     primes = []
-    for i in range(first_prime, n):
+    for i in range(2, n):
         if all([i % p for p in primes]):
             primes.append(i)
 
     with open('primes', 'w') as f:
         for p in primes:
-            f.write(str(p)  + '\n')
+            f.write(str(p) + '\n')
+
+    # all primes go in the file, just the first and last 3 go in the output
+    dots = False
+    count = len(primes)
+    for num, p in enumerate(primes):
+        if num < 3:
             print(p)
+        elif count - num <= 3 and num > 3:
+            print(p)
+        else:
+            if not dots:
+                print('...')
+                dots = True
 
 # read from a file called 'primes'
 # exit nonzero if these aren't spaced like primes
@@ -76,3 +88,4 @@ def primes_less_than(n: int) -> co.Serial:
 
 if __name__ == "__main__":
     co.main()
+

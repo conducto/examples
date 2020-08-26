@@ -1,14 +1,15 @@
+#!/usr/bin/env python3
 from collections import namedtuple
-import sys
+import sys, select
 
 # exit nonzero if these aren't spaced like primes
 def distrib(upper_bound):
 
     # load alledged primes
     primes = []
-    with open("primes", "r") as f:
-        for numstr in f.readlines():
-            primes.append(int(numstr))
+
+    for numstr in sys.stdin.readlines():
+        primes.append(int(numstr))
 
     # based on their volume, select a distribution check
     FilterParam = namedtuple("FilterParam", "n p")
