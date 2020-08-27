@@ -1,7 +1,7 @@
 # erastothenes
 
 Three nodes, takes an int parameter, _n_
- - Use the Seive of Erastothenes to calculate all primes up to _n_
+ - Use the Sieve of Erastothenes to calculate all primes up to _n_
  - Depending on the size of _n_, use either Bertrand's Postulate, or Nagura's Theorem to validate that the result is dense enough to consist of consecutive primes
  - Check that 2 is included
 
