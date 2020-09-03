@@ -10,7 +10,7 @@ A two-language hello world
 
 #### Concepts
 
-- [Image Handling](https://www.conducto.com/docs/basics/image-handling#adding-local-files)
+- [Images](https://www.conducto.com/docs/basics/images#adding-local-files)
 
 #### API's
 
