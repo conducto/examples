@@ -15,4 +15,6 @@ def hello() -> co.Serial:
 
 
 if __name__ == '__main__':
+    co.Image.share_directory("hello_py_js", ".")
     co.main(default=hello)
+

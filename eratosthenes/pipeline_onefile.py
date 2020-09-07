@@ -1,6 +1,9 @@
 import conducto as co
 
 def sieve(n: int):
+    """
+    Print all of the prime numbers up to a given number.
+    """
 
     primes = []
     for i in range(2, n):
