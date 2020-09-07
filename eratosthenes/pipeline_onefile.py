@@ -2,7 +2,7 @@ import conducto as co
 
 def sieve(n: int):
     """
-    Print all of the prime numbers up to a given number.
+    Print all of the prime numbers less than n
     """
 
     primes = []
