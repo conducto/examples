@@ -6,18 +6,36 @@ def myfunc(mem, cpu: int = 1200):
     print("node has 1.5 GB of ram")
     print(f"Ryzen {cpu}'s support {mem}")
 
-def otherfunc(payload):
-
-    # 'payload' will come in as a string
-    print(payload)
-
-    # so this will fail
+def func(payload: dict):
     for k, v in payload.items():
         print(k, ":", v)
 
-def fixedfunc(payload : dict):
-    # instead, serialize on either side
-    otherfunc(json.loads(payload))
+def wrappedfunc(payload: str):
+    func(json.loads(payload))
+
+# for custom types, provide to_str and from_str
+class Emoticon:
+    def __init__(self, happy=False):
+        self.happy = happy
+
+    def to_str(self):
+        if self.happy:
+            return ":)"
+        else:
+            return ":("
+
+    def from_str(s):
+        if s == ":)":
+           return Emoticon(happy=True)
+        else:
+           return Emoticon(happy=False)
+
+def describe(face: Emoticon):
+    print(face.to_str())
+    if face.happy:
+        print("Happy")
+    else:
+        print("Sad")
 
 def disambiguate() -> co.Parallel:
     with co.Parallel(image=co.Image(copy_dir=".")) as node:
@@ -36,15 +54,17 @@ def disambiguate() -> co.Parallel:
         node["C"].set(cpu=0.75, mem=1.5)
 
 
-        # there are more than one way to display this as a string
+        # some non-custom types don't have obvious string representations
         payload = { "foo" : 2,
                     "bar" : 3 }
+        func(payload)
 
-        # this will call payload.__str__, which is probably not what you want
-        node["D"] = co.Exec(otherfunc, payload)
+        # so you may have to handle the serialization yourself
+        node["D"] = co.Exec(wrappedfunc, json.dumps(payload))
 
-        # so you may have to hand the serialization yourself
-        node["E"] = co.Exec(fixedfunc, json.dumps(payload))
+        # custom types work, but you need to provide helpers
+        param_obj = Emoticon(happy=True)
+        node["E"] = co.Exec(describe, param_obj)
 
     return node
 
