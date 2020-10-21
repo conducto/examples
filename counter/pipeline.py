@@ -74,7 +74,7 @@ def integration_test():
     if (one + 1) == two:
         print("increment detected")
     else:
-        raise Exception("got {resp_two} then {resp_one}")
+        raise Exception(f"got {one} then {two}")
 
 # Pipeline Definitions
 ######################
