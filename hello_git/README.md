@@ -29,7 +29,7 @@ Use `copy_repo` to detect the parent repo (this one) and clone it:
 
 #### Concepts
 
-- [Image Handling](https://www.conducto.com/docs/basics/image-handling#adding-files-via-git)
+- [Image Handling](https://www.conducto.com/docs/basics/images#adding-files-via-git)
 
 #### API's
 

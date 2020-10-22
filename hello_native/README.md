@@ -1,17 +1,20 @@
-# hello_py
+# hello_native
 
-A single-node hello world with a python dependency
+A few Conducto needs to install external dependencies into the image.
 
-### To Run
+### A Python-Native Function
 
-    pip install -r requirements.txt
     python ./pipeline.py --local
+
+### A Linux-Package-Manager-Installed Utility
+
+    python ./pipeline.py hello_linux --local
 
 ### Related
 
 #### Concepts
 
-- [Image Handling](https://www.conducto.com/docs/basics/image-handling#adding-python-packages)
+- [Image Handling](https://www.conducto.com/docs/basics/images#adding-packages)
 - [Native Functions](https://www.conducto.com/docs/basics/native-functions)
 
 #### API's
