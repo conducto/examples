@@ -16,6 +16,7 @@ test_img = co.Image(
 # The functions below are called directly by exec nodes in the
 # Pipeline Definitions section
 
+
 def redis_up():
     """
     Is Redis Up?
@@ -23,7 +24,7 @@ def redis_up():
 
     # not a dependency of user-side code
     # but required once inside the pipeline
-    #(provided by 'reqs_py` kwarg to test_img)
+    # (provided by 'reqs_py` kwarg to test_img)
     import redis
 
     ip = co.data.pipeline.gets("/redis/ip").decode()
@@ -76,6 +77,7 @@ def integration_test():
     else:
         raise Exception(f"got {one} then {two}")
 
+
 # Pipeline Definitions
 ######################
 
@@ -86,6 +88,7 @@ def integration_test():
 
 # To launch a local pipeline from this definition:
 # $ python pipeline.py --local
+
 
 def pipeline() -> co.Serial:
     """
@@ -114,8 +117,10 @@ def pipeline() -> co.Serial:
 
     return root
 
+
 # To launch a local pipeline from this definition:
 # $ python pipeline.py deploy --local
+
 
 def deploy() -> co.Parallel:
     """
@@ -159,12 +164,12 @@ def deploy() -> co.Parallel:
     return node
 
 
-
 # In this example, container id's are stored on the launched pipeline instance.
 # Unlike the pipeline-node-returning functions above, the ones below can't be
 # called independently from the CLI because the new pipeline wouldn't have the
 # data that they need) you could work around this by using `conducto-data-user`
 # instead.
+
 
 def test_up() -> co.Parallel:
     """
@@ -175,6 +180,7 @@ def test_up() -> co.Parallel:
         node["hit flask"] = co.Exec(flask_up)
     return node
 
+
 def teardown():
     """
     Stop containers.
@@ -184,8 +190,10 @@ def teardown():
         node["flask"] = co.Exec("docker stop $(conducto-data-pipeline gets /flask/id)")
     return node
 
+
 # Helper Functions
 ##################
+
 
 def extract(path):
     """

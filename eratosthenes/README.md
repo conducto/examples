@@ -16,8 +16,8 @@ This example comes with a bug--the last test fails due to a problem in [seive.py
 
 #### Concepts
 
-- [Image Handling](https://www.conducto.com/docs/basics/image-handling#using-an-unmodified-image)
 - [Debugging](https://www.conducto.com/docs/basics/debugging)
+- [Native Functions](https://www.conducto.com/docs/basics/native-functions)
 
 #### API's
 

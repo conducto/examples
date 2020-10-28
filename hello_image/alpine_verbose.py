@@ -2,10 +2,12 @@ import conducto as co
 
 cmd = "cat /etc/*-release"
 
+
 def which_distro() -> co.Serial:
     pipeline = co.Serial()
-    pipeline["Node Name"] = co.Exec(cmd, image='alpine:latest')
+    pipeline["Node Name"] = co.Exec(cmd, image="alpine:latest")
     return pipeline
+
 
 if __name__ == "__main__":
     co.main(default=which_distro)

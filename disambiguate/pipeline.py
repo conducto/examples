@@ -1,17 +1,21 @@
 import conducto as co
 import json
 
+
 def myfunc(mem, cpu: int = 1200):
     print("node has 0.75 cpu cores")
     print("node has 1.5 GB of ram")
     print(f"Ryzen {cpu}'s support {mem}")
 
+
 def func(payload: dict):
     for k, v in payload.items():
         print(k, ":", v)
 
+
 def wrappedfunc(payload: str):
     func(json.loads(payload))
+
 
 # for custom types, provide to_str and from_str
 class Emoticon:
@@ -26,9 +30,10 @@ class Emoticon:
 
     def from_str(s):
         if s == ":)":
-           return Emoticon(happy=True)
+            return Emoticon(happy=True)
         else:
-           return Emoticon(happy=False)
+            return Emoticon(happy=False)
+
 
 def describe(face: Emoticon):
     print(face.to_str())
@@ -36,6 +41,7 @@ def describe(face: Emoticon):
         print("Happy")
     else:
         print("Sad")
+
 
 def disambiguate() -> co.Parallel:
     with co.Parallel(image=co.Image(copy_dir=".")) as node:
@@ -53,10 +59,8 @@ def disambiguate() -> co.Parallel:
         node["C"] = co.Exec(myfunc, "DDR4-2667 (dual channel)")
         node["C"].set(cpu=0.75, mem=1.5)
 
-
         # some non-custom types don't have obvious string representations
-        payload = { "foo" : 2,
-                    "bar" : 3 }
+        payload = {"foo": 2, "bar": 3}
         func(payload)
 
         # so you may have to handle the serialization yourself

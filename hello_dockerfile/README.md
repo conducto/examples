@@ -11,7 +11,7 @@ Uses a [Dockerfile](./Dockerfile) to do something custom
 
 #### Concepts
 
-- [Image Handling](https://www.conducto.com/docs/basics/image-handling#go-custom-with-a-dockerfile)
+- [Image Handling](https://www.conducto.com/docs/basics/images#go-custom-with-a-dockerfile)
 
 #### API's
 

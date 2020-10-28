@@ -1,4 +1,4 @@
-# hello_dockerhub
+# image_version
 
 Runs a command in a docker image whose version is pinned to a specific hash.  Specifically `alpine@sha256:185518070891758909c9f839cf4ca393ee977ac378609f700f60a771a2dfe321`.  This way the command will always use the same image.
 

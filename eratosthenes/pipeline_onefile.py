@@ -1,5 +1,6 @@
 import conducto as co
 
+
 def sieve(n: int):
     """
     Print all of the prime numbers less than n
@@ -10,6 +11,7 @@ def sieve(n: int):
         if all([i % p for p in primes]):
             primes.append(i)
             print(i)
+
 
 # A pipeline which generates primes and runs some tests on the list
 def primes_less_than(n: int) -> co.Serial:

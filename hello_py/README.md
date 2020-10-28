@@ -10,7 +10,7 @@ A single-node hello world
 
 #### Concepts
 
-- [Image Handling](https://www.conducto.com/docs/basics/image-handling#using-an-unmodified-image)
+- [Image Handling](https://www.conducto.com/docs/basics/images#using-an-unmodified-image)
 
 #### API's
 

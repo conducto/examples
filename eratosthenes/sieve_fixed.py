@@ -13,7 +13,7 @@ first = 3
 last = 3
 dots = False
 count = len(primes)
-with open('primes', 'w') as f:
+with open("primes", "w") as f:
     for num, p in enumerate(primes):
 
         # add to file
@@ -25,5 +25,5 @@ with open('primes', 'w') as f:
             print(p)
         else:
             if not dots:
-                print('...')
+                print("...")
                 dots = True
