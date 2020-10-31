@@ -1,6 +1,12 @@
 .venv
 venv
-__pycache__/
 
 .terraform
 *.wpr
+
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+.DS_Store
