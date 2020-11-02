@@ -3,6 +3,7 @@
 # hepful text on the pipeline instance and not in the definition too.
 
 from inspect import cleandoc
+import conducto as co
 
 def guide(root):
     """
@@ -69,8 +70,31 @@ def guide(root):
         """)
 
        # add this section when the next stop is ready
-       # #### Next Steps
-       #
-       # Next: [clone a git repo](app/sandbox/github/conducto/examples?dir=tour/git&preview_file=pipeline.py)
+
+    root["summary"] = stop_summary()
 
     return root
+
+def stop_summary():
+    summary = co.Exec(":", doc=cleandoc(
+        """
+        #### Summary
+
+        The failing node referenced software that was missing from its image.
+
+        The fix was to edit the pipeline definition so it used an image with Node.js.
+
+        If all of this pipeline's nodes are green, you've completed this example.
+
+        #### Related Docs:
+
+        - [Pipeline Structure](/docs/basics/pipeline-structure)
+        - [Controlling a Pipeline](/docs/basics/controlling-a-pipeline)
+        - [Hello World (tutorial)](/docs/getting-started/hello-world)
+
+        #### Next Stop: [include code via `git`](app/sandbox/github/conducto/examples?dir=tour/git&preview_file=pipeline.py)
+
+        In the next example you'll learn how to include code from a git repo.
+        """))
+
+    return summary
