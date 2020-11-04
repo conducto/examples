@@ -1,10 +1,10 @@
 import conducto as co
-import tour
 
 def pipeline() -> co.Serial:
     """
     Welcome to Conducto
     """
+
 
     # this example runs the code below in separate containers
     py_code = 'print("Hello")'
@@ -14,25 +14,26 @@ def pipeline() -> co.Serial:
     root = co.Serial()
 
     # this leaf runs ok
-    root["hello"] = co.Exec(f"python -c '{py_code}'")
+    root["hello"] = co.Exec(
+        f"python -c '{py_code}'",
+        doc="Run some Python code")
 
     # this one has a problem
     root["world"] = co.Exec(
         f"echo '{js_code}' | node -",
         #image="node:current-alpine"
+        doc="Run some Javascript via Node.js")
     )
 
-    # explore the pipeline to understand the problem
+    # to understand the problem, explore the pipeline -->
+    # or see README.md for more guidance
 
-    # uncomment the 'image' kwarg to fix it
-
-    # then relaunch the pipeline:
+    # to fix it:
+    # - uncomment the 'image' kwarg
     #
-    #     <Ctrl> + S       - save the file
-    #     <Esc>            - defocus the editor
-    #     <Ctrl> + <Enter> - try the fix
-
-    root = tour.guide(root)     # nothing to see here
+    # then:
+    # - save this file (<Ctrl> + S)
+    # - reset the failed node
 
     return root
 
