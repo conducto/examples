@@ -1,6 +1,6 @@
-# hello_py
+# hello_cpp
 
-A single-node hello world
+A single-node hello world in c++
 
 ### To Run
 
