@@ -10,9 +10,10 @@ The left pane lets you view the files in this project.
 You're looking at `README.md` right now.
 If you select `pipeline.py` you'll see a pipeline definition instead.
 
-There you'll find a function called `pipeline()`.
-It returns an object that Conducto uses to build the tree in the pane to the right.
-There you'll find clues about the problem.
+In that file there's a function called `pipeline()`.
+It returns an object that Conducto uses to build the tree to the right.
+
+Explore the pipeline tree to find clues about the problem.
 
 ## Pipeline Instance
 
@@ -21,7 +22,7 @@ You can click each node to see more information about it.
 
 ### Root Node: `/`
 
-Conducto pipelines are trees, and root is called `/`.
+The root node of every Conducto pipeline is called `/`.
 Select it.
 
 #### Reset It
@@ -31,7 +32,7 @@ The child nodes will rerun automatically if "run" is enabled.
 
 #### P Q R D E K
 
-The row of numbers in the **Results** section of the root node shows how many children are...
+The numbers to the right of the tree shows how many children are...
 
 - **P** ending
 - **Q** ueued
@@ -39,7 +40,6 @@ The row of numbers in the **Results** section of the root node shows how many ch
 - **D** one
 - **E** rrored
 - **K** illed
-
 
 #### Explore the Pipeline Tree
 
@@ -69,16 +69,17 @@ To understand why:
 #### Missing Software
 
 This node's image is based on [`python:3.8-slim`](https://hub.docker.com/_/python).
-The command fails because node.js is not in this image.
+The command fails because node.js is not present.
+To fix this, use a different image for this node.
 
 Image assignment can only be done in the definition.
 To fix it:
 
- - assign [`node:current-alpine`](https://hub.docker.com/_/node") as this `/world`'s image.
+ - assign [`node:current-alpine`](https://hub.docker.com/_/node") as `/world`'s image.
  - save `pipeline.py`
  - reset the failing node
 
-# Summary
+## Summary
 
 The failing node referenced software that was missing from its image.
 
@@ -86,7 +87,8 @@ The fix was to edit the pipeline definition so it used an image with Node.js.
 
 If all of this pipeline's nodes are green, you've completed this example.
 
-#### Related Docs:
+## Related Docs:
 
 - [Pipeline Structure](/docs/basics/pipeline-structure)
 - [Controlling a Pipeline](/docs/basics/controlling-a-pipeline)
+- [Hello World (tutorial)](/docs/getting-started/hello-world)
