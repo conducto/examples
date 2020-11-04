@@ -6,7 +6,7 @@ def pipeline() -> co.Serial:
     Welcome to Conducto
     """
 
-    # this example runs this code in separate containers
+    # let's run this code in separate containers
     py_code = 'print("Hello")'
     js_code = 'console.log("World!")'
 

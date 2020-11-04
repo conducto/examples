@@ -68,7 +68,7 @@ To understand why:
 
 #### Missing Software
 
-This node's image is based on [`python:3.8-slim`](https://hub.docker.com/_/python) .
+This node's image is based on [`python:3.8-slim`](https://hub.docker.com/_/python).
 The command fails because node.js is not in this image.
 
 Image assignment can only be done in the definition.
