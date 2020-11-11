@@ -8,4 +8,4 @@ This example creates a pipeline with two serial nodes, one has `stop_on_error=Tr
 
 ### Concepts
 
-- [pipeline-structure](https://conducto.com/docs/basics/controlling-a-pipeline)
+- [pipeline-structure](https://conducto.com/docs/basics/pipeline-structure)

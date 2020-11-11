@@ -1,4 +1,6 @@
-# tree.py
+"""
+This example has three identical pipelines, each is specified in a different syntax.
+"""
 import conducto as co
 
 foo = co.Image(name="foo")
@@ -6,7 +8,11 @@ bar = co.Image(name="bar")
 
 
 def dict() -> co.Serial:
-    root = co.Serial(image="foo")
+    """
+    Each Node is [dict-like](/docs/basics/pipeline-structure#dict), and you can
+    build a hierarchy by assigning children into them.
+    """
+    root = co.Serial(image="foo", doc=co.util.magic_doc())
     root["all together"] = co.Parallel()
     root["all together"]["a"] = co.Exec("echo step 1, image bar", image="bar")
     root["all together"]["b"] = co.Exec("echo step 1, image foo")
@@ -17,7 +23,11 @@ def dict() -> co.Serial:
 
 
 def path() -> co.Serial:
-    root = co.Serial(image="foo")
+    """
+    The Node tree can be accessed with file system-like
+    [paths](/docs/basics/pipeline-structure#path).
+    """
+    root = co.Serial(image="foo", doc=co.util.magic_doc())
     root["all together"] = co.Parallel()
     root["all together/a"] = co.Exec("echo step 1, image bar", image="bar")
     root["all together/b"] = co.Exec("echo step 1, image foo")
@@ -28,7 +38,12 @@ def path() -> co.Serial:
 
 
 def context() -> co.Serial:
-    with co.Serial(image=foo) as root:
+    """
+    You can use [context managers](/docs/basics/pipeline-structure#context)
+    (Python's `with` statement) to add children. This lets you use whitespace
+    to express node depth.
+    """
+    with co.Serial(image=foo, doc=co.util.magic_doc()) as root:
         with co.Parallel(name="all together"):
             co.Exec("echo step 1, image bar", name="a", image=bar)
             co.Exec("echo step 1, image foo", name="b")
