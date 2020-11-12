@@ -5,7 +5,7 @@ Three nodes, takes an int parameter, _n_
  - Depending on the size of _n_, use either Bertrand's Postulate, or Nagura's Theorem to validate that the result is dense enough to consist of consecutive primes
  - Check that 2 is included
 
-This example comes with a bug--the last test fails due to a problem in [seive.py](seive.py) .  Use the "live-debug" option to modify [seive.py](seive.py) and fix it.
+This example comes with a bug--the last test fails due to a problem in [sieve.py](sieve.py) .  Use the "live-debug" option to modify [sieve.py](sieve.py) and fix it.
 
 
 ### To Run
