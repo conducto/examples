@@ -105,8 +105,8 @@ def stop_summary():
             - [Tour Map](/docs/getting-started/tour)
             - [Pipeline Structure](/docs/basics/pipeline-structure)
             - [Images](/docs/basics/images)
-            - [Hello Git (example)](https://github.com/conducto/examples/blob/main/hello_git/pipeline.py)
-            - [Hello Native (example)](https://github.com/conducto/examples/tree/main/hello_native)
+            - [Hello Git (example)](https://github.com/conducto/examples/blob/main/features/hello_git/pipeline.py)
+            - [Hello Native (example)](https://github.com/conducto/examples/tree/main/features/hello_native)
 
 
             #### A fork in the road:
