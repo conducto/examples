@@ -77,7 +77,12 @@ def cleanup() -> co.Serial:
 DEPLOY_STACK_CMD = """
 set -ex
 cd cloudformation
+
+# Use Troposphere to generate the CloudFormation template
 python {stack}.py -o template.yml
+cat template.yml
+
+# Validate and deploy it
 aws cloudformation validate-template --template-body file://template.yml
 aws cloudformation deploy --template-file template.yml \\
   --stack-name conducto-demo-{stack} --capabilities CAPABILITY_NAMED_IAM
@@ -110,10 +115,12 @@ set -e
 export URL=http://$({GET_DNS_NAME_CMD})
 echo "Testing URL=$URL"
 
+# Call '/', which outputs a Hello World message
 OUTPUT=$(curl -s $URL/demo)
 echo "GET /demo -> $OUTPUT"
 test "$OUTPUT" == "Hello, Conducto!"
 
+# Post data to /demo/user, which gets saved
 OUTPUT=$(
   curl -s -X POST -H "Content-Type: application/json" \\
   -d '{{"key": "age", "value": "42"}}' $URL/demo/user/BobLoblaw
@@ -121,10 +128,12 @@ OUTPUT=$(
 echo "POST /user/BobLoblaw -> $OUTPUT"
 test "$OUTPUT" == '{{"user": "BobLoblaw", "data": {{"age": "42"}}}}'
 
+# Request the same data from /demo/user
 OUTPUT=$(curl -s $URL/demo/user/BobLoblaw)
 echo "GET /user/BobLoblaw -> $OUTPUT"
 test "$OUTPUT" == '{{"user": "BobLoblaw", "data": {{"age": "42"}}}}'
 
+# Test that the 'hacker' user is disallowed
 OUTPUT=$(curl -s $URL/demo/user/hacker)
 echo "GET /user/hacker -> $OUTPUT"
 test "$OUTPUT" == '{{"error": "Unauthorized"}}'
@@ -152,9 +161,11 @@ aws ecr delete-repository --repository-name conducto-demo --force || true
 ########################################################################
 
 INIT_DOC = """
-Deploying the AWS infrastructure, building the docker image for the
-service, running a linter, and unit testing the service are all
-independent of each other, so run them in parallel.
+Run the initialization steps in parallel:
+* Deploy the AWS infrastructure
+* Build the docker image for the service
+* Run a linter
+* Unit test the service
 """
 
 INTEGRATION_DOC = """
@@ -165,7 +176,7 @@ that it is working.
 CLEANUP_DOC = """
 Unskip this node when you are ready to cleanup all of the AWS resources
 created by this pipeline. It deletes the cloudformation stacks used to
-deploy the service, ELB, and and VPC, then uses the aws cli to delete
+deploy the service, ELB, and and VPC, then uses the AWS CLI to delete
 the ECR repo. Note that AWS requires that the cloudformation stacks be
 deleted in serial, due to dependencies between the stacks.
 """
