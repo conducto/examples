@@ -7,7 +7,8 @@ Continuous Integration and Continuous Deployment (CI/CD) is the automatic buildi
 
 Here are examples of Conducto pipelines that build, test, and deploy.
 
-- [Local Flask app](./cicd/local_flask/): Lint, build, and test a Flask app, then deploy it locally with Docker.  
+- [Flask app - local](./cicd/flask_microservice/): Lint, build, and test a Flask app, then deploy it locally with Docker.
+- [Flask app - AWS](./cicd/aws_microservice/): Same Flask app as above, but deployed to AWS. Must supply your own AWS credentials.  
 - [Local microservices](./cicd/local_microservices/): Deploy and clean up two microservices that talk to each other.
 
 ## Data Pipelines & Data Science
@@ -21,7 +22,8 @@ Data pipelines like that are straightforward in Conducto.
 These are pipelines that illustrate different features of Conducto.
 - Several flavors of Hello World
   - [Python from shell](./features/hello_py/): Say "Hello" from Python.
-  - [Python & JavaScript](./features/hello_py_js/): Nodes can have different environments. Say "Hello" in Python and "World" in JavaScript.
+  - [Python & JavaScript in shell](./features/hello_world): Nodes can have different environments. Say "Hello" in Python and "World" in JavaScript.
+  - [Python & JavaScript in scripts](./features/hello_py_js/): Same as above, but execute scripts instead of specifying code on the command line.
   - [Git](./features/hello_git/): Load code from Git repos.
   - [Python functions](./features/hello_native/): Directly call Python functions in `Exec` nodes.
   - [Docker](./features/hello_docker/): Run Docker's builtin Hello World image.
