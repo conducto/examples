@@ -6,7 +6,7 @@ into AWS Elastic Container Service behind a load balancer, tests
 it, and then cleans up all AWS resources.
 
 You must have an AWS account and specify the following as secrets
-in the Conducto app:
+in the Conducto app, or in the environment:
 * AWS_ACCESS_KEY_ID
 * AWS_SECRET_ACCESS_KEY
 * AWS_DEFAULT_REGION
@@ -25,7 +25,8 @@ import conducto as co
 
 def main() -> co.Serial:
     img = co.Image(dockerfile="./Dockerfile", reqs_docker=True)
-    with co.Serial(image=img, doc=__doc__) as root:
+    with co.Serial(image=img, env=get_env(), doc=__doc__) as root:
+        root["Check AWS Creds"] = co.Exec(CHECK_AWS_CREDS)
         with co.Parallel(name="Init", doc=INIT_DOC) as init:
             init["Deploy Infra"] = deploy_infra()
             init["Deploy Image"] = deploy_image()
@@ -35,6 +36,18 @@ def main() -> co.Serial:
         root["Integration Test"] = co.Exec(INTEGRATION_CMD, doc=INTEGRATION_DOC)
         root["Cleanup"] = cleanup()
     return root
+
+
+def get_env():
+    # TODO: It is better to specify your AWS credentials as secrets in the
+    # Conducto app, but if you want to quickly test this pipeline, you can
+    # inject your credentials as environment variables in the root node.
+    #return {
+    #    "AWS_ACCESS_KEY_ID": "DUMMY_ACCESS_KEY_ID",
+    #    "AWS_SECRET_ACCESS_KEY": "DUMMY_SECRET_ACCESS_KEY",
+    #    "AWS_DEFAULT_REGION": "DUMMY_REGION",
+    #}
+    return {}
 
 
 def deploy_infra() -> co.Serial:
@@ -73,6 +86,15 @@ def cleanup() -> co.Serial:
 ########################################################################
 # Commands
 ########################################################################
+
+CHECK_AWS_CREDS = """
+if [ -z "$AWS_ACCESS_KEY_ID" ] || [ -z "$AWS_SECRET_ACCESS_KEY" ] || [ -z "$AWS_DEFAULT_REGION" ]; then
+    echo "Must specify AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, and AWS_DEFAULT_REGION in env or secrets"
+    exit 1
+else
+    echo "Found AWS credentials in environment"
+fi
+"""
 
 DEPLOY_STACK_CMD = """
 set -ex
