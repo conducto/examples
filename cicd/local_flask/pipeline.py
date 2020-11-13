@@ -1,24 +1,42 @@
+"""
+### Simple CI/CD Pipeline
+
+This is a CI/CD pipeline that builds and tests a simple flask
+microservice, deploys it locally, then tests the deployment.
+"""
+
 import conducto as co
+
+########################################################################
+# Pipeline Definition
+########################################################################
 
 
 def main() -> co.Serial:
-    img = co.Image(
-        "python:3.8-slim",
-        copy_dir=".",
-        reqs_py=["conducto", "flask", "black"],
-        reqs_packages=["curl"],
-        reqs_docker=True,
-    )
-    with co.Serial(image=img) as root:
+    with co.Serial(image=get_image(), doc=__doc__) as root:
         with co.Parallel(name="Init"):
             co.Exec("docker build -t my_image .", name="Build", requires_docker=True)
             co.Exec("black --check .", name="Lint")
-            co.Exec("python test.py --verbose", name="UnitTest")
+            co.Exec("python test.py --verbose", name="Unit Test")
         root["Deploy"] = co.Exec(DEPLOY_CMD, requires_docker=True)
-        root["IntegrationTest"] = co.Exec(INTEGRATION_TEST_CMD)
+        root["Integration Test"] = co.Exec(INTEGRATION_TEST_CMD)
         root["Cleanup"] = co.Exec("docker kill my_app", requires_docker=True)
     return root
 
+
+def get_image():
+    return co.Image(
+        "python:3.8-slim",
+        copy_dir=".",
+        reqs_py=["flask", "black"],
+        reqs_packages=["curl"],
+        reqs_docker=True,
+    )
+
+
+########################################################################
+# Commands
+########################################################################
 
 # In reality you would deploy this to Heroku, K8s, ECS, or
 # something similar. For demo purposes, just start container
