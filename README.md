@@ -16,7 +16,8 @@ Data pipelines are easy! Just download data, merge it, compute features, run mac
 
 Data pipelines like that are straightforward in Conducto.
 
-- [Predict churn](./data_science/predict_churn/): Combine sample user data with transaction data and build a model to predict customer churn. 
+- [Predict churn](./data_science/predict_churn/): Combine sample user data with transaction data and build a model to predict customer churn.
+- [Weather data](./data_science/weather_data/): Download US weather data and then visualize it.
 
 ## Features
 These are pipelines that illustrate different features of Conducto.
