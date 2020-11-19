@@ -34,6 +34,7 @@ def main(src_image, test_env, prod_env=None) -> co.Serial:
         # can we autenticate?  If not, fail early.
         with co.Parallel(name="access check"):
 
+            co.Exec("echo $FOO", name="delete me")
             co.Exec(TEST_HEROKU_CMD, image=infractl_image, name="Heroku")
             co.Exec(TEST_REDIS_CMD, image=test_image, name="RedisLabs")
 
@@ -53,8 +54,18 @@ def main(src_image, test_env, prod_env=None) -> co.Serial:
         #     if prod_env:
         #         teardown(prod_env, name=prod_env["NAME"])
 
-        # why does enabling "/teardown" break "/acces check"?
+        # why does enabling "/teardown" break "/access check"?
         # it somehow clobbers the env vars
+        #
+        # 0. Launch a pipeline with the code as it is
+        # 1. Note that "$FOO" is set
+        # 2. Uncomment above
+        # 3. Update Serialization (via `--pipeline_id=wut-evr`)
+        # 4. Refresh root node
+        # 5. Note that "$FOO" is uninitialized
+        #
+        # step 3 doesn't appear to break it
+        # you get the problem if you start with "/teardown" enabled
 
     return root
 
