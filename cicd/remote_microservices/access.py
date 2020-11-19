@@ -46,7 +46,9 @@ def env(tag: str, and_print=True) -> dict:
       "REDIS_PORT": "17350",
       "REDIS_PASSWORD": "MS9nyx9GuTAAJ8aCuK34lpRxRHEzfnh5",
       "REDIS_KEY": "MS9nyx9GuTAAJ8aCuK34lpRxRHEzfnh5",
-      "NAME": "co-12-bestuser-prod"
+      "NAME": "co-12-bestuser-prod",
+      "CONDUCTO_USER": "bestuser",
+      "CONDUCTO_USER_FAKE_EMAIL": "bestuser+fakeaddr@bestorg.conducto"
     }
     """
 
@@ -59,7 +61,11 @@ def env(tag: str, and_print=True) -> dict:
         env.update(_to_env([key, value]))
 
     env["TAG"] = tag
-    env["NAME"] = uniqstr(tag)
+    env["NAME"] = profile.my_env(tag)
+
+    # for git config
+    env["CONDUCTO_USER"] = profile.name
+    env["CONDUCTO_USER_FAKE_EMAIL"] = profile.email
 
     if and_print:
         print(f"{tag}:")
@@ -70,9 +76,7 @@ def env(tag: str, and_print=True) -> dict:
 
 
 def _to_env(kvp: list) -> dict:
-    """
-    Translate from external secretes into environment vars
-    """
+    """Translate from external secretes into environment vars"""
 
     # get value from user secrets
     def fetch(key, value):
@@ -103,16 +107,59 @@ def _to_env(kvp: list) -> dict:
     return env
 
 
-def uniqstr(tag: str) -> str:
-    """
-    A unique string to differentiate this app from others.
+class UserStrings:
+    def clean(dirty):
+        return "".join(c for c in dirty if c.isalnum()).lower()
 
-    tag: differentiates environments, like "test" vs "prod"
+    def __init__(self):
+        dir_api = co.api.Dir()
+        user = dir_api.user()
+        org = dir_api.org_by_user()
 
-    Returns things like: "co-12-bestuser-test"
-    """
+        self.name = UserStrings.clean(user["name"])
+        org_id = user["org_id"]
+        org_name = UserStrings.clean(org["name"])
+        self.env_template = "-".join(["co", str(org_id), self.name, "{}"])
+        self.email = self.name + "+fakeaddr@" + org_name + ".conducto"
 
-    user = co.api.Dir().user()
-    user_name = user["name"].replace(" ", "").lower()
-    org_id = user["org_id"]
-    return "-".join(["co", str(org_id), user_name, tag])
+    def my_env(self, tag: str) -> str:
+        """
+        A unique string to differentiate this app from others.
+
+        tag: differentiates environments, like "test" vs "prod"
+
+        Returns things like: "co-12-pocahontas-test"
+        """
+
+        return self.env_template.format(tag)
+
+
+# get user details from conducto
+profile = UserStrings()
+
+
+# generate secrets if user doesn't already have them
+
+key_key = "HEROKU_SSH_PRIVKEY"
+ssh_img = co.Image(copy_dir=".", reqs_py=["conducto", "sh"], reqs_packages=["ssh"])
+
+
+def ensure_ssh(**kwargs) -> co.Serial:
+
+    with co.Serial(**kwargs) as node:
+
+        gen = co.Exec(ssh_keygen)
+        gen.set(image=ssh_img)
+        node["gen key if missing"] = gen
+        # more...
+
+    return node
+
+
+def ssh_keygen():
+
+    from sh import ssh_keygen
+
+    user_secrets = co.api.Secrets().get_user_secrets()
+    if key_key not in user_secrets:
+        ssh_keygen(["-t", "ed25519", "-N''", "-f", "/root/.ssh/id_heroku"])

@@ -16,12 +16,15 @@ to the necessary infrastructure services, see access.py.
 
 import conducto as co
 
-# see access.py to set credential
+# see access.py to set up credentials
 import access
 
 # we'll need these tools
 infractl_image = "finalgene/heroku-cli"
 test_image = co.Image(reqs_packages=["redis", "curl"])
+
+repo = "https://github.com/conducto/examples"
+prod_branch = "main"
 
 
 def main(src_image, test_env, prod_env=None) -> co.Serial:
@@ -29,12 +32,12 @@ def main(src_image, test_env, prod_env=None) -> co.Serial:
     Test the code, deploy if appropriate.
     """
 
-    with co.Serial(doc=__doc__, image=src_image, env=test_env) as root:
+    with co.Serial(doc=__doc__, image=src_image, env=test_env.copy()) as root:
 
         # can we autenticate?  If not, fail early.
         with co.Parallel(name="access check"):
 
-            co.Exec("echo $FOO", name="delete me")
+            access.ensure_ssh(name="ensure ssh")
             co.Exec(TEST_HEROKU_CMD, image=infractl_image, name="Heroku")
             co.Exec(TEST_REDIS_CMD, image=test_image, name="RedisLabs")
 
@@ -44,28 +47,15 @@ def main(src_image, test_env, prod_env=None) -> co.Serial:
             deploy(src_image, test_env, name="deploy")
             co.Exec(INTEGRATION_TEST_CMD, name="test")
 
-        # true for CD only
+        # if CI + CD, deploy it to a prod env
         if prod_env:
             deploy(src_image, prod_env, name="deploy")
 
-        # # Unskip a child to undeploy
-        # with co.Serial(skip=True, name="teardown"):
-        #     teardown(test_env, name=test_env["NAME"])
-        #     if prod_env:
-        #         teardown(prod_env, name=prod_env["NAME"])
-
-        # why does enabling "/teardown" break "/access check"?
-        # it somehow clobbers the env vars
-        #
-        # 0. Launch a pipeline with the code as it is
-        # 1. Note that "$FOO" is set
-        # 2. Uncomment above
-        # 3. Update Serialization (via `--pipeline_id=wut-evr`)
-        # 4. Refresh root node
-        # 5. Note that "$FOO" is uninitialized
-        #
-        # step 3 doesn't appear to break it
-        # you get the problem if you start with "/teardown" enabled
+        # Unskip a child of teardown to remove either env
+        with co.Serial(skip=True, name="teardown"):
+            teardown(test_env, name=test_env["NAME"])
+            if prod_env:
+                teardown(prod_env, name=prod_env["NAME"])
 
     return root
 
@@ -75,14 +65,14 @@ def deploy(src_image: co.Image, env: dict, **kwargs) -> co.Serial:
     Put the code in an environment.
     """
 
-    with co.Serial(env=env, **kwargs) as node:
+    with co.Serial(env=env.copy(), **kwargs) as node:
 
         # deploy the code
         with co.Serial(name=env["NAME"]) as deploy:
 
             deploy["create"] = co.Exec(CREATE_APP_CMD)
 
-            push_cmd = PUSH_CODE_CMD.format(src_image.path_to_code)
+            push_cmd = PUSH_CODE_CMD.format(src=src_image.path_to_code, repo=repo)
             deploy["push"] = co.Exec(push_cmd)
 
         # fail if we can't see the service
@@ -96,7 +86,7 @@ def teardown(env: dict, **kwargs) -> co.Parallel:
     Un-deploy an environment.
     """
 
-    with co.Parallel(env=env, **kwargs) as down:
+    with co.Parallel(env=env.copy(), **kwargs) as down:
         down["clear data"] = co.Exec(CLEAR_DATA_CMD, image=test_image)
         down["stop flask"] = co.Exec(STOP_FLASK_CMD, image=infractl_image)
 
@@ -132,15 +122,27 @@ fi
 """
 
 PUSH_CODE_CMD = """
-# capture latest app clode
-cd {}
+set -ex
+
+# prepare creds for git push
+KEYFILE = /root/.ssh/id_rsa
+echo "$HEROKU_SSH_PRIVKEY" > "$KEYFILE"
+chmod 700 "$KEYFILE"
+
+# grab outer repo details, if available
+REV=$(git rev-parse HEAD) 2>/dev/null || x=NO_SHA
+
+# prepare inner repo for push
+cd {src}
 git init
+git config --local user.email "$CONDUCTO_USER_FAKE_EMAIL"
+git config --local user.name "$CONDUCTO_USERNAME"
+git config --local url.ssh://git@heroku.com/.insteadOf https://git.heroku.com/
 heroku git:remote -a "$NAME"
 
-# push it to heroku
-REV=$(git rev-parse HEAD)
+# push code to heroku
 git add -A
-git commit -m "conducto/examples@$REV"
+git commit -m "{repo}@$REV"
 git push heroku master
 """
 
@@ -216,9 +218,6 @@ def merge() -> co.Serial:
     """
     Triggered from a merge to "main"
     """
-
-    prod_branch = "main"
-    repo = "https://github.com/conducto/examples"
 
     src_img = get_src_img(copy_url=repo, copy_branch=prod_branch)
     src_img.path_to_code = "./cicd/remote_microservices"
