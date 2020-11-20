@@ -16,16 +16,17 @@ to the necessary infrastructure services, see access.py.
 
 import conducto as co
 
-CRC = co.ContainerReuseContext
-
 # see access.py to set up credentials
 import access
 import ssh
+
+CRC = co.ContainerReuseContext
 
 # we'll need these tools
 infractl_image = "finalgene/heroku-cli"
 test_image = co.Image(reqs_packages=["redis", "curl"])
 
+# production tracks this branch
 repo = "https://github.com/conducto/examples"
 prod_branch = "main"
 
@@ -40,18 +41,18 @@ def main(src_image, test_env, prod_env=None) -> co.Serial:
         # can we autenticate?  If not, fail early.
         with co.Parallel(name="access check"):
 
-            co.Exec(TEST_HEROKU_CMD, image=infractl_image, name="Heroku  API")
-            co.Exec(TEST_REDIS_CMD, image=test_image, name="RedisLabs")
+            co.Exec(TEST_HEROKU, image=infractl_image, name="Heroku  API")
+            co.Exec(TEST_REDIS, image=test_image, name="RedisLabs")
 
         # test the code in a test env
         with co.Serial(name="test"):
 
-            deploy(src_image, test_env, name="deploy")
-            co.Exec(INTEGRATION_TEST_CMD, name="test")
+            deploy(src_image, test_env, name="deploy " + test_env["NAME"])
+            co.Exec(INTEGRATION_TEST, name="integration test", image=test_image)
 
         # if CI + CD, deploy it to a prod env
         if prod_env:
-            deploy(src_image, prod_env, name="deploy")
+            deploy(src_image, prod_env, name="deploy " + prod_env["NAME"])
 
         # Unskip a child of teardown to remove either env
         with co.Serial(skip=True, name="teardown"):
@@ -69,16 +70,30 @@ def deploy(src_image: co.Image, env: dict, **kwargs) -> co.Serial:
 
     with co.Serial(env=env.copy(), **kwargs) as node:
 
-        # deploy the code
-        with co.Serial(name=env["NAME"], container_reuse_context=CRC.NEW) as deploy:
+        with co.Serial(name="env up"):
 
-            ssh.prep(name="prepare ssh")
-            deploy["create app"] = co.Exec(CREATE_APP_CMD)
-            push_cmd = PUSH_CODE_CMD.format(src=src_image.path_to_code, repo=repo)
-            deploy["push code"] = co.Exec(push_cmd)
+            co.Exec(CREATE_APP, name="create app")
+            co.Exec(STOP_APP, name="stop if not already")
+            co.Exec(CONFIGURE_APP, name="configure app")
 
-        # fail if we can't see the service
-        node["sanity check"] = co.Exec(TEST_FLASK_CMD, image=test_image)
+            with co.Serial(container_reuse_context=CRC.NEW, name="move bits"):
+
+                # The key can't be recalled if it was created by this
+                # pipeline.  My workaround is to leave it in the
+                # container.  This means that this has to happen at
+                # every deploy, rather that up in access_check where it
+                # belongs
+                ssh.prep(name="prepare ssh")
+
+                push_cmd = PUSH_CODE.format(src=src_image.path_to_code, repo=repo)
+                co.Exec(push_cmd, name="push code")
+
+            co.Exec(START_APP, name="start app")
+
+        # fail if obvious things are wrong
+        with co.Parallel(name="sanity check"):
+            co.Exec(PEEK_LOGS, name="peek at logs")
+            co.Exec(TEST_FLASK, image=test_image, name="check alive")
 
     return node
 
@@ -89,8 +104,9 @@ def teardown(env: dict, **kwargs) -> co.Parallel:
     """
 
     with co.Parallel(env=env.copy(), **kwargs) as down:
-        down["clear data"] = co.Exec(CLEAR_DATA_CMD, image=test_image)
-        down["stop flask"] = co.Exec(STOP_FLASK_CMD, image=infractl_image)
+        co.Exec(CLEAR_DATA, image=test_image, name="clear data")
+        co.Exec(STOP_APP, name="stop")
+        co.Exec(DESTROY_APP, name="destroy")
 
     return down
 
@@ -99,22 +115,22 @@ def teardown(env: dict, **kwargs) -> co.Parallel:
 # Commands
 ########################################################################
 
-TEST_REDIS_CMD = """
-set -ex
+TEST_REDIS = """
+set -eux
 redis-cli -h "$REDIS_HOST" \\
           -p "$REDIS_PORT" \\
           -a "$REDIS_PASSWORD" ping | grep PONG
 """
 
-TEST_HEROKU_CMD = """
-set -ex
+TEST_HEROKU = """
+set -eux
 echo $HEROKU_API_KEY
 heroku auth:whoami
 """
 
 
-CREATE_APP_CMD = """
-set -ex
+CREATE_APP = """
+set -eux
 
 if heroku apps | grep "$NAME" > /dev/null
 then
@@ -124,14 +140,16 @@ else
 fi
 """
 
-PUSH_CODE_CMD = """
-set -ex
+PUSH_CODE = """
+set -euxo pipefail
+
+SRC_DIR=$(readlink -f {src})
 
 # grab outer repo details, if available
 REV=$(git rev-parse HEAD) 2>/dev/null || x=NO_SHA
 
 # prepare inner repo for push
-cd {src}
+cd $SRC_DIR
 git init
 git config --global user.email "$CONDUCTO_USER_FAKE_EMAIL"
 git config --global user.name "$CONDUCTO_USER"
@@ -141,36 +159,81 @@ heroku git:remote -a "$NAME"
 # push code to heroku
 git add -A
 git commit -m "{repo}@$REV"
-git push heroku master
+git push -f heroku master 2>&1 \\
+    | tee /dev/fd/2 \\
+    | tee remote_logs \\
+    | grep 'Verifying deploy... done'
+
+# if successful, stash url
+cat remote_logs \\
+    | grep 'herokuapp.com' \\
+    | egrep -o 'https://[^ ]*' \\
+    | tee >(conducto-data-pipeline puts "/$TAG/url")
+
 """
 
-TEST_FLASK_CMD = """
+CONFIGURE_APP = """
+set -eux
+heroku config:set \\
+    TAG=$TAG \\
+    REDIS_HOST=$REDIS_HOST \\
+    REDIS_PORT=$REDIS_PORT \\
+    REDIS_PASSWORD=$REDIS_PASSWORD \\
+    -a $NAME
+"""
+
+START_APP = """
+set -eux
+heroku ps:scale web=1 -a "$NAME"
+"""
+
+PEEK_LOGS = """
+set -euxo pipefail
+sleep 3
+
+heroku logs -a "$NAME" \\
+    | tail -n 30 \\
+    | tee log_snippet 1>&2
+
+grep -i 'starting gunicorn' log_snippet
+grep -i 'listening' log_snippet
+"""
+
+TEST_FLASK = """
 set -ex
-FLASK_IP=$(conducto-data-pipeline gets /flask/ip)
-curl $FLASK_IP:5000
+FLASK_URL=$(conducto-data-pipeline gets /$TAG/url)
+curl -vf $FLASK_URL
 """
 
-INTEGRATION_TEST_CMD = """
+INTEGRATION_TEST = """
 set -ex
 
 # two requests for flask
-FLASK_IP=$(conducto-data-pipeline gets /flask/ip)
-curl -s $FLASK_IP:5000 | egrep -o '[0-9]+' > first
-curl -s $FLASK_IP:5000 | egrep -o '[0-9]+' > second
+FLASK_URL=$(conducto-data-pipeline gets /$TAG/url)
+curl -s $FLASK_URL | egrep -o '[0-9]+' > first
+curl -s $FLASK_URL | egrep -o '[0-9]+' > second
 
 # did they increment?
 let FIRST_PLUS_ONE="$(cat first)+1"
 cat second | grep $FIRST_PLUS_ONE
 """
 
-CLEAR_DATA_CMD = """
+CLEAR_DATA = """
 set -ex
-redis-cli -h "$REDIS_IP" \\
+redis-cli -h "$REDIS_HOST" \\
           -p "$REDIS_PORT" \\
-          -a "$REDIS_PASSWORD" ping | grep PONG
+          -a "$REDIS_PASSWORD" del "$TAG"
 """
 
-STOP_FLASK_CMD = "docker stop my_flask"
+STOP_APP = """
+set -eux
+heroku ps:scale web=0 -a "$NAME" || true
+"""
+
+DESTROY_APP = """
+set -eux
+heroku apps:destroy -a "$NAME" --confirm="$NAME"
+"""
 
 ########################################################################
 # Entrypoints
@@ -193,7 +256,7 @@ def testlocal() -> co.Serial:
     src_img = get_src_img(copy_dir=".")
     src_img.path_to_code = "."
 
-    print(f"Testing code from local filesystem in {test_env_name}")
+    print(f"Testing code from local filesystem in remote env: {test_env_name}")
 
     return main(src_img, test_env)
 
@@ -206,7 +269,7 @@ def pr(branch: str) -> co.Serial:
     src_img = get_src_img(copy_repo=True)
     src_img.path_to_code = "./cicd/remote_microservices"
 
-    print(f"Testing branch indicated by PR in {test_env_name}")
+    print(f"Testing branch indicated by PR in remote env: {test_env_name}")
 
     return main(src_img, test_env)
 
@@ -219,7 +282,7 @@ def merge() -> co.Serial:
     src_img = get_src_img(copy_url=repo, copy_branch=prod_branch)
     src_img.path_to_code = "./cicd/remote_microservices"
 
-    print(f"Testing branch: {prod_branch} in  {test_env_name}")
+    print(f"Testing branch: {prod_branch} in remote env: {test_env_name}")
 
     prod_env = access.env("prod")
     prod_env_name = prod_env["Name"]
@@ -240,6 +303,8 @@ def get_src_img(**kwargs):
 
 
 if __name__ == "__main__":
+
+    co.Image.share_directory("remote_microservices", ".")
 
     # If you're in a sandbox, uncomment only one of these or install
     # condcuto for local control

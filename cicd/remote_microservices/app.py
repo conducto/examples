@@ -21,7 +21,7 @@ def get_hit_count():
             val = cache.incr(tag)
 
             # add two
-            # val = cache.incr(cache.incr(redis_key))
+            # val = cache.incr(cache.incr(tag))
             return val
         except redis.exceptions.ConnectionError as exc:
             if retries == 0:
@@ -34,3 +34,10 @@ def get_hit_count():
 def how_many():
     count = get_hit_count()
     return "Served {} requests\n".format(count)
+
+
+if __name__ == "__main__":
+
+    # Bind to PORT if defined, otherwise default to 5000.
+    port = int(os.environ.get("PORT", 5000))
+    app.run(host="0.0.0.0", port=port)
