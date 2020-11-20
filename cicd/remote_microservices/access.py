@@ -20,7 +20,8 @@ No Conducto account yet?  Modify the code below instead.
 
 Once these values are stored, see README.md or pipeline.py.
 """
-from pprint import pprint
+from pprint import pformat
+from textwrap import indent
 import conducto as co
 
 
@@ -68,9 +69,8 @@ def env(tag: str, and_print=True) -> dict:
     env["CONDUCTO_USER_FAKE_EMAIL"] = profile.email
 
     if and_print:
-        print(f"{tag}:")
-        pprint(env)
-        print()
+        print(f"{tag} env:")
+        print(indent(pformat(env), 4 * " "))
 
     return env
 
@@ -136,30 +136,3 @@ class UserStrings:
 
 # get user details from conducto
 profile = UserStrings()
-
-
-# generate secrets if user doesn't already have them
-
-key_key = "HEROKU_SSH_PRIVKEY"
-ssh_img = co.Image(copy_dir=".", reqs_py=["conducto", "sh"], reqs_packages=["ssh"])
-
-
-def ensure_ssh(**kwargs) -> co.Serial:
-
-    with co.Serial(**kwargs) as node:
-
-        gen = co.Exec(ssh_keygen)
-        gen.set(image=ssh_img)
-        node["gen key if missing"] = gen
-        # more...
-
-    return node
-
-
-def ssh_keygen():
-
-    from sh import ssh_keygen
-
-    user_secrets = co.api.Secrets().get_user_secrets()
-    if key_key not in user_secrets:
-        ssh_keygen(["-t", "ed25519", "-N''", "-f", "/root/.ssh/id_heroku"])

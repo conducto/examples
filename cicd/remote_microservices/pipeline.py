@@ -16,8 +16,11 @@ to the necessary infrastructure services, see access.py.
 
 import conducto as co
 
+CRC = co.ContainerReuseContext
+
 # see access.py to set up credentials
 import access
+import ssh
 
 # we'll need these tools
 infractl_image = "finalgene/heroku-cli"
@@ -37,8 +40,7 @@ def main(src_image, test_env, prod_env=None) -> co.Serial:
         # can we autenticate?  If not, fail early.
         with co.Parallel(name="access check"):
 
-            access.ensure_ssh(name="ensure ssh")
-            co.Exec(TEST_HEROKU_CMD, image=infractl_image, name="Heroku")
+            co.Exec(TEST_HEROKU_CMD, image=infractl_image, name="Heroku  API")
             co.Exec(TEST_REDIS_CMD, image=test_image, name="RedisLabs")
 
         # test the code in a test env
@@ -68,12 +70,12 @@ def deploy(src_image: co.Image, env: dict, **kwargs) -> co.Serial:
     with co.Serial(env=env.copy(), **kwargs) as node:
 
         # deploy the code
-        with co.Serial(name=env["NAME"]) as deploy:
+        with co.Serial(name=env["NAME"], container_reuse_context=CRC.NEW) as deploy:
 
-            deploy["create"] = co.Exec(CREATE_APP_CMD)
-
+            ssh.prep(name="prepare ssh")
+            deploy["create app"] = co.Exec(CREATE_APP_CMD)
             push_cmd = PUSH_CODE_CMD.format(src=src_image.path_to_code, repo=repo)
-            deploy["push"] = co.Exec(push_cmd)
+            deploy["push code"] = co.Exec(push_cmd)
 
         # fail if we can't see the service
         node["sanity check"] = co.Exec(TEST_FLASK_CMD, image=test_image)
@@ -113,6 +115,7 @@ heroku auth:whoami
 
 CREATE_APP_CMD = """
 set -ex
+
 if heroku apps | grep "$NAME" > /dev/null
 then
     echo "found $NAME"
@@ -124,20 +127,15 @@ fi
 PUSH_CODE_CMD = """
 set -ex
 
-# prepare creds for git push
-KEYFILE = /root/.ssh/id_rsa
-echo "$HEROKU_SSH_PRIVKEY" > "$KEYFILE"
-chmod 700 "$KEYFILE"
-
 # grab outer repo details, if available
 REV=$(git rev-parse HEAD) 2>/dev/null || x=NO_SHA
 
 # prepare inner repo for push
 cd {src}
 git init
-git config --local user.email "$CONDUCTO_USER_FAKE_EMAIL"
-git config --local user.name "$CONDUCTO_USERNAME"
-git config --local url.ssh://git@heroku.com/.insteadOf https://git.heroku.com/
+git config --global user.email "$CONDUCTO_USER_FAKE_EMAIL"
+git config --global user.name "$CONDUCTO_USER"
+git config --global url.ssh://git@heroku.com/.insteadOf https://git.heroku.com/
 heroku git:remote -a "$NAME"
 
 # push code to heroku
@@ -145,7 +143,6 @@ git add -A
 git commit -m "{repo}@$REV"
 git push heroku master
 """
-
 
 TEST_FLASK_CMD = """
 set -ex
@@ -234,7 +231,12 @@ def merge() -> co.Serial:
 
 # Helper for injecting code into the deploy image
 def get_src_img(**kwargs):
-    return co.Image(image=infractl_image, reqs_packages=["git"], **kwargs)
+    return co.Image(
+        image=infractl_image,
+        reqs_py=["conducto", "sh"],
+        reqs_packages=["git", "openssh"],
+        **kwargs,
+    )
 
 
 if __name__ == "__main__":
