@@ -16,13 +16,17 @@ def prep(**kwargs):
         node["gen key if missing"] = gen
         # more...
 
-        co.Exec(REGISTER_KEY_CMD, name="register key")
-        co.Exec(TEST_KEY_CMD, name="test key")
+        co.Exec(REGISTER_KEY, name="register key")
+        co.Exec(TEST_KEY, name="test key")
 
     return node
 
 
 def ssh_keygen():
+    """
+    If the key is in user secrets, use it.
+    Otherwise put a fresh one there.
+    """
 
     from sh import ssh_keygen, bash
 
@@ -47,7 +51,7 @@ def ssh_keygen():
 # Commands
 ########################################################################
 
-REGISTER_KEY_CMD = f"""
+REGISTER_KEY = f"""
 set -e
 
 # restore key if not already in place
@@ -70,7 +74,7 @@ heroku keys:add pubkey
 """
 
 ssh_middle = f"-i {key_file} -o StrictHostKeyChecking=no -T git@heroku.com"
-TEST_KEY_CMD = f"""
+TEST_KEY = f"""
 set -ex
 
 # test ssh key
