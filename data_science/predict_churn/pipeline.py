@@ -4,9 +4,6 @@ Adapted from https://www.kaggle.com/kmalit/bank-customer-churn-prediction.
 """
 import conducto as co
 
-CUST = "data/customer_data.csv"
-TRNS = "data/transaction_data.csv"
-
 
 ########################################################################
 # Pipeline
