@@ -1,106 +1,55 @@
 """
-Make churn prediction model based on input data.
-
-Run this with `python pipeline.py --local --run`.
-
+### Data science pipeline to build customer churn prediction model.
 Adapted from https://www.kaggle.com/kmalit/bank-customer-churn-prediction.
 """
 import conducto as co
-import math
-import os
-
-IMG = co.Image(
-    "python:3.8",
-    copy_dir=".",
-    reqs_py=["numpy", "pandas", "matplotlib", "xgboost", "seaborn", "conducto",
-             "sklearn", "tabulate", "tqdm"],
-    reqs_packages=["figlet"],
-)
-R_IMG = co.Image(dockerfile="docker/Dockerfile.r", copy_dir=".")
 
 CUST = "data/customer_data.csv"
 TRNS = "data/transaction_data.csv"
 
-MODELS = ["logistic", "rf", "xgb"]
 
-INTRO = "_Conducto_ for Data Science"
-
-
-################################################################################
+########################################################################
 # Pipeline
-################################################################################
+########################################################################
 def main() -> co.Serial:
-    """
-    A sample pipeline to predict customer churn:
-    * Load in customer and transaction data
-    * Join them
-    * Compute features
-    * Fit and backtest several different ML models
-    * Analyze all the results and pick the best one.
-    """
-    output = co.Serial(image=IMG, doc=co.util.magic_doc())
-    output["Intro"] = co.Exec(f"figlet '{INTRO}'")
+    with co.Serial(image=get_image(), doc=ROOT_DOC) as output:
+        output["Intro"] = co.Exec(f"figlet '_Conducto_ for Data Science'")
 
-    # Load data sources into temporary storage with the command-line
-    # interface to [co.data](/api/data).
-    output["LoadData"] = co.Parallel(doc=co.util.magic_doc(comment=True))
-    output["LoadData/Customer"] = co.Exec(
-        f"conducto-data-pipeline put /raw/cust {co.relpath(CUST)}"
-    )
-    output["LoadData/Transaction"] = co.Exec(
-        f"conducto-data-pipeline put /raw/trns {co.relpath(TRNS)}"
-    )
+        with co.Parallel(name="LoadData", doc=LOAD_DOC) as load:
+            load["Customer"] = co.Exec(PUT_CUSTOMER_DATA_CMD)
+            load["Transaction"] = co.Exec(PUT_TRANSACTION_DATA_CMD)
 
-    # Join customer data (`cust`) with transaction data (`trns`).
-    #
-    # The data could be large, so we split this join up into smaller chunks. We
-    # can't figure out the chunks, however, until after `/LoadData` has run.
-    # Therefore the `/Join/Generate` step analyzes the data and creates nodes,
-    # then `/Join/Execute` runs them. See
-    # [co.Lazy](/api/pipelines/#lazy-pipeline-creation) for more details.
-    output["Join"] = co.Lazy(join,
-        "/raw/cust", "/raw/trns", out="/joined", tmp="/tmp/join", on="CustomerId"
-    )
-    output["Join"].doc = co.util.magic_doc(comment=True)
+        output["Join"] = co.Lazy(join_customer_transaction_data)
+        output["Join"].doc = JOIN_DOC
 
-    # After merging customer records with their transaction history, we
-    # prepare the data for input into a machine learning model.
-    output["ComputeFeatures"] = co.Exec(
-        "python commands.py compute_features /joined /features",
-        doc=co.util.magic_doc(comment=True)
-    )
+        output["ComputeFeatures"] = co.Exec(COMPUTE_CMD, doc=COMPUTE_DOC)
 
-    # Fit & backtest machine learning models in parallel
-    output["Models"] = co.Parallel(doc=co.util.magic_doc(comment=True))
-    for md in MODELS:
-        output["Models"][md] = co.Serial()
-        output["Models"][md]["Fit"] = co.Exec(
-            f"python commands.py fit {md} /features /models/{md}"
-        )
-        output["Models"][md]["Backtest"] = co.Exec(
-            f"python commands.py backtest /features /models/{md} /results/{md}"
-        )
+        with co.Parallel(name="Models", doc=MODELS_DOC) as models:
+            for md in ["logistic", "rf", "xgb"]:
+                with co.Serial(name=md) as fit_and_test:
+                    fit_and_test["Fit"] = co.Exec(FIT_CMD.format(md=md))
+                    fit_and_test["Backtest"] = co.Exec(BACKTEST_CMD.format(md=md))
 
-    # Analyze the backtests to find the best model. Use R, because
-    # commands can be from any language, not just Python.
-    output["Analyze"] = co.Exec(
-        "Rscript analyze.R /results", image=R_IMG,
-        doc=co.util.magic_doc(comment=True),
-    )
-
-    # We run the Analyze step in R to emphasize that commands can be in any
-    # language. If you work exclusively in Python, command that out and run
-    # this instead:
-    # output["Analyze"] = co.Exec("python commands.py analyze /results")
+        output["Analyze"] = co.Exec(ANALYZE_CMD, doc=ANALYZE_DOC)
 
     return output
+
+
+def join_customer_transaction_data() -> co.Serial:
+    return join(
+        "/raw/cust",
+        "/raw/trns",
+        out="/joined",
+        tmp="/tmp/join",
+        on="CustomerId"
+    )
 
 
 def join(left, right, out, tmp, on, chunk_size=5000) -> co.Serial:
     """
     Inner join the given DataFrames in parallel, then merge them.
 
-    * `left` - path in `co.data.pipeline` to the left DataFrom to join.
+    * `left` - path in `co.data.pipeline` to the left DataFrame to join.
     * `right` - path in `co.data.pipeline` to the right DataFrame to join.
     * `out` - path in `co.data.pipeline` to write the result.
     * `tmp` - path in `co.data.pipeline` to write temporary data
@@ -109,36 +58,66 @@ def join(left, right, out, tmp, on, chunk_size=5000) -> co.Serial:
       artificially low number so that this demo can show parallelism. In real
       usage you would adjust this for your I/O and memory availability.
     """
+    import os
+    base_l = os.path.basename(left)
+    base_r = os.path.basename(right)
     df_l = _read_dataframe(left)
     df_r = _read_dataframe(right)
 
-    output = co.Serial()
+    with co.Serial() as output:
+        # Step 1, join blocks in parallel
+        with co.Parallel(name="Parallelize") as parallelize:
+            for start_l, end_l in _batch(df_l[on], chunk_size):
+                name_l = f"{base_l}:{start_l}-{end_l}"
+                parallelize[name_l] = node = co.Parallel()
 
-    # Step 1, join blocks in parallel
-    output["Parallelize"] = co.Parallel()
+                for start_r, end_r in _batch(df_r[on], chunk_size):
+                    name_r = f"{base_r}:{start_r}-{end_r}"
+                    tmp_name = f"{tmp}/{base_l}:{start_l}-{end_l}_{base_r}:{start_r}-{end_r}"
+                    node[name_r] = co.Exec(
+                        do_join, left, right, tmp_name, on, start_l, end_l, start_r, end_r
+                    )
 
-    base_l = os.path.basename(left)
-    base_r = os.path.basename(right)
-    for start_l, end_l in _batch(df_l[on], chunk_size):
-        name_l = f"{base_l}:{start_l}-{end_l}"
-        output["Parallelize"][name_l] = node1 = co.Parallel()
-
-        for start_r, end_r in _batch(df_r[on], chunk_size):
-            name_r = f"{base_r}:{start_r}-{end_r}"
-            tmp_name = f"{tmp}/{base_l}:{start_l}-{end_l}_{base_r}:{start_r}-{end_r}"
-            node1[name_r] = co.Exec(
-                do_join, left, right, tmp_name, on, start_l, end_l, start_r, end_r
-            )
-
-    # Step 2, merge the results
-    output["Merge"] = co.Exec(do_concat, tmp, out)
+        # Step 2, merge the results
+        output["Merge"] = co.Exec(do_concat, tmp, out)
 
     return output
 
 
-################################################################################
-# Implementation
-################################################################################
+def get_image():
+    return co.Image(dockerfile="./Dockerfile", copy_dir=".")
+
+
+########################################################################
+# Commands
+########################################################################
+PUT_CUSTOMER_DATA_CMD = """
+conducto-data-pipeline put /raw/cust ./data/customer_data.csv
+"""
+
+PUT_TRANSACTION_DATA_CMD = """
+conducto-data-pipeline put /raw/trns ./data/transaction_data.csv
+"""
+
+COMPUTE_CMD = """
+python commands.py compute_features /joined /features
+"""
+
+FIT_CMD = """
+python commands.py fit {md} /features /models/{md}
+"""
+
+BACKTEST_CMD = """
+python commands.py backtest /features /models/{md} /results/{md}
+"""
+
+ANALYZE_CMD = """
+Rscript analyze.R /results
+"""
+
+########################################################################
+# Native python functions called by pipeline.
+########################################################################
 def do_join(left, right, out, on, start_idx_l: int, end_idx_l: int, start_idx_r: int, end_idx_r: int):
     """
     Do one portion of a parallel merge: load the left and right DataFrames, subset
@@ -166,6 +145,7 @@ def _batch(series, chunk_size):
     """
     Helper to split up the series into even-sized chunks of under the given size.
     """
+    import math
     num_chunks = math.ceil(len(series) / chunk_size)
     chunk_size = int(math.ceil(len(series) / num_chunks))
     for start in range(0, len(series), chunk_size):
@@ -190,6 +170,48 @@ def _write_dataframe(df, path):
     data = df.to_csv()
     co.data.pipeline.puts(path, data.encode())
 
+########################################################################
+# Docs
+########################################################################
+
+ROOT_DOC = """
+A sample pipeline to predict customer churn:
+* Load in customer and transaction data
+* Join them
+* Compute features
+* Fit and backtest several different ML models
+* Analyze all the results and pick the best one.
+"""
+
+LOAD_DOC = """
+Load data sources into temporary storage with the command-line interface
+to [co.data](/api/data). Alternatively, you could load data into S3 or
+some other storage solution.
+"""
+
+JOIN_DOC = """
+Join customer data (`cust`) with transaction data (`trns`).
+
+The data could be large, so we split this join up into smaller chunks. We
+can't figure out the chunks, however, until after `/LoadData` has run.
+Therefore the `/Join/Generate` step analyzes the data and creates nodes,
+then `/Join/Execute` runs them. See
+[co.Lazy](/api/pipelines/#lazy-pipeline-creation) for more details.
+"""
+
+COMPUTE_DOC = """
+After merging customer records with their transaction history, we
+prepare the data for input into a machine learning model.
+"""
+
+MODELS_DOC = """
+Fit and backtest machine learning models in parallel.
+"""
+
+ANALYZE_DOC = """
+Analyze the backtests to find the best model. Use R, because
+commands can be from any language, not just Python.
+"""
 
 if __name__ == "__main__":
     co.main(default=main)
