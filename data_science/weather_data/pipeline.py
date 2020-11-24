@@ -19,7 +19,7 @@ def run() -> co.Serial:
     return output
 
 ############################################################
-# Command to run
+# Native python function called by pipeline.
 ############################################################
 def display(dataset):
     """
