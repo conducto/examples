@@ -75,4 +75,5 @@ test "$OUTPUT" == 'Hello, Conducto!'
 
 
 if __name__ == "__main__":
+    co.Image.share_directory("flask_microservice", ".")
     co.main(default=main)
