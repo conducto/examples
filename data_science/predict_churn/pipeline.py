@@ -211,4 +211,5 @@ commands can be from any language, not just Python.
 """
 
 if __name__ == "__main__":
+    co.Image.share_directory("predict_churn", ".")
     co.main(default=main)
