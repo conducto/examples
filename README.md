@@ -31,6 +31,7 @@ These are pipelines that illustrate different features of Conducto.
   - [Dockerfile](./features/hello_dockerfile/): Use a custom Dockerfile to say hello with a Pokemon!
 - [Container reuse](./features/container_reuse/): Conducto can go faster by reusing containers. Learn how to control this.
 - [Passing arguments](./features/disambiguate): Nuances of argument passing with direct Python functions.
+- [Lazy pipelines](./features/lazy_pipelines): Dynamically build pipelines at runtime, based on data.
 - [Pinning image version](./features/image_version/): Specify a particular Docker image version for added security and reliability. 
 - [Stop on error](./features/stop_on_error/): `Serial(stop_on_error=True/False)` gives you additional control for handling errors.
 - [Tree syntax](./features/tree_syntax/): Shows the three different ways to assemble your tree, with different levels of readability vs reusability. 
