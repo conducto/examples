@@ -8,10 +8,10 @@ def main() -> co.Serial:
         root["Download"] = co.Exec(GET_DATA_CMD.format(raw))
         root["Preprocess"] = co.Exec(f"python commands.py preprocess {raw} {dir}/processed.h5ad")
         root["PCA"] = co.Exec(f"python commands.py pca {dir}/processed.h5ad {dir}/pca.h5ad")
-        root["Neighborhood"] = co.Exec(f"python commands.py pca {dir}/pca.h5ad {dir}/neighborhood.h5ad")
+        root["Neighborhood"] = co.Exec(f"python commands.py neighborhood {dir}/pca.h5ad {dir}/neighborhood.h5ad")
         root["Markers"] = co.Parallel()
         for method in "t-test", "wilcoxon", "logreg":
-            root["Markers"][method] = co.Exec(f"python commands.py marker {method} {dir}/neighborhood.h5ad")
+            root["Markers"][method] = co.Exec(f"python commands.py marker {method} {dir}/neighborhood.h5ad {dir}/result-{method}.h5ad")
     return root
 
 
@@ -20,7 +20,7 @@ def get_image():
         "python:3.8-slim",
         copy_dir=".",
         reqs_packages=["wget"],
-        reqs_py=["conducto", "numpy", "pandas", "scanpy", "ipdb"]
+        reqs_py=["conducto", "numpy", "pandas", "scanpy", "ipdb", "leidenalg", "tabulate"]
     )
 
 

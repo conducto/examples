@@ -186,16 +186,17 @@ def marker(method, in_path, out_path=None):
 
     with co.nb.cell():
         # With the exceptions of IL7R, which is only found by the t-test and FCER1A, which is only found by the other two approaches, all marker genes are recovered in all approaches.
-        # | Louvain Group |	Markers	| Cell Type |
-        # | ------------- | ------- | --------- |
-        # | 0 |	IL7R |	CD4 T cells |
-        # | 1 |	CD14, LYZ |	CD14+ Monocytes |
-        # | 2 |	MS4A1 |	B cells |
-        # | 3 |	CD8A |	CD8 T cells |
-        # | 4 |	GNLY, NKG7 |	NK cells |
-        # | 5 |	FCGR3A, MS4A7 |	FCGR3A+ Monocytes |
-        # | 6 |	FCER1A, CST3 |	Dendritic Cells |
-        # | 7 |	PPBP |	Megakaryocytes |
+        #
+        # | Louvain Group | Markers       | Cell Type         |
+        # | ------------- | ------------- | ----------------- |
+        # | 0             | IL7R          | CD4 T cells       |
+        # | 1             | CD14, LYZ     | CD14+ Monocytes   |
+        # | 2             | MS4A1         | B cells           |
+        # | 3             | CD8A          | CD8 T cells       |
+        # | 4             | GNLY, NKG7    | NK cells          |
+        # | 5             | FCGR3A, MS4A7 | FCGR3A+ Monocytes |
+        # | 6             | FCER1A, CST3  | Dendritic Cells   |
+        # | 7             | PPBP          | Megakaryocytes    |
         pass
 
     with co.nb.cell():
@@ -207,10 +208,11 @@ def marker(method, in_path, out_path=None):
         # Get a table with the scores and groups.
         result = adata.uns['rank_genes_groups']
         groups = result['names'].dtype.names
-        df = pd.DataFrame(
-            {group + '_' + key[:1]: result[key][group]
-             for group in groups for key in ['names', 'pvals']}).head(5)
-        print(df.to_markdown())
+        if "pvals" in result:
+            df = pd.DataFrame(
+                {group + '_' + key[:1]: result[key][group]
+                 for group in groups for key in ['names', 'pvals']}).head(5)
+            print(df.to_markdown())
 
     with co.nb.cell():
         # Compare to a single cluster:
