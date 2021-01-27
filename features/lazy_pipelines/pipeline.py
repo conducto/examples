@@ -52,7 +52,7 @@ def _load_data():
     import io
     import pandas as pd
     s3 = boto3.client("s3")
-    response = s3.get_object(Bucket="conducto-lazy", Key="netflix_titles.csv")
+    response = s3.get_object(Bucket="conducto-examples", Key="netflix_titles.csv")
     contents = response["Body"].read()
     return pd.read_csv(io.BytesIO(contents))
 
