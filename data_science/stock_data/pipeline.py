@@ -254,10 +254,12 @@ def make_backtest_node(feature_dir, model_file, tmp_dir, out_file) -> co.Serial:
 ############################################################
 def _load_all_data():
     import boto3
+    from botocore import UNSIGNED
+    from botocore.client import Config
     import io
     import pandas as pd
 
-    s3 = boto3.client("s3")
+    s3 = boto3.client("s3", config=Config(signature_version=UNSIGNED))
     response = s3.get_object(Bucket="conducto-examples", Key="stock_data_spy.csv")
     contents = response["Body"].read()
     return pd.read_csv(io.BytesIO(contents))
