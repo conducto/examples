@@ -17,7 +17,7 @@ def main(start_date="20120101") -> co.Serial:
     """
     path = "/conducto/data/pipeline"
 
-    root = co.Serial(image=_get_image())
+    root = co.Serial(image=_get_image(), env={"PYTHONBREAKPOINT":"ipdb.set_trace"})
     root["Download"] = co.Exec(download_data, f"{path}/raw")
 
     # "Compute Features" should be parallelized at runtime, based on the actual
@@ -291,8 +291,17 @@ def _get_image():
     return co.Image(
         "python:3.8-slim",
         copy_dir=".",
-        reqs_py=["conducto", "boto3", "pandas", "sklearn", "matplotlib"],
+        reqs_py=["conducto", "boto3", "pandas", "sklearn", "matplotlib", "ipdb"],
     )
+
+
+try:
+    import IPython.core.crashhandler
+except ImportError:
+    pass
+else:
+    import traceback
+    IPython.core.crashhandler.crash_handler_lite = traceback.print_exception
 
 
 if __name__ == "__main__":

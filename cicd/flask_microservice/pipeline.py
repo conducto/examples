@@ -14,7 +14,7 @@ import conducto as co
 
 def main() -> co.Serial:
     with co.Serial(image=get_image(), doc=__doc__) as root:
-        with co.Parallel(name="Init"):
+        with co.Parallel(name="Initialize"):
             co.Exec("docker build -t my_image .", name="Build", requires_docker=True)
             co.Exec("black --check .", name="Lint")
             co.Exec("python test.py --verbose", name="Unit Test")
@@ -29,7 +29,7 @@ def get_image():
         "python:3.8-slim",
         copy_dir=".",
         reqs_py=["flask", "black"],
-        reqs_packages=["curl"],
+        reqs_packages=["curl", "vim"],
         reqs_docker=True,
     )
 

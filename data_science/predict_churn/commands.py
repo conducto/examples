@@ -121,18 +121,18 @@ def fit(model, input: str, output: str):
             'intercept_scaling': [1], 'penalty': ['l2'], 'tol': loguniform(1e-6, 1e-4)
         }
         mdl_cv = RandomizedSearchCV(LogisticRegression(solver='lbfgs'), param_dist, cv=3, refit=True, verbose=2, n_iter=10)
-    elif model == "rf":
+    elif model == "rand_forest":
         # Random Forest classifier
         param_dist = {'max_depth': randint(3,8), 'max_features': randint(2,9), 'n_estimators': randint(50, 100),
                       'min_samples_split': randint(3, 7)}
         mdl_cv = RandomizedSearchCV(RandomForestClassifier(), param_dist, cv=3, refit=True, verbose=2, n_iter=10)
-    elif model == "xgb":
+    elif model == "gradient_boost":
         # Extreme Gradient Boost classifier
         param_dist = {'max_depth': [3, 4], 'gamma': loguniform(1e-3, 1e-2), 'min_child_weight': randint(1, 10),
                       'learning_rate': loguniform(0.05, 0.3), 'n_estimators': randint(10, 40)}
         mdl_cv = RandomizedSearchCV(XGBClassifier(), param_dist, cv=3, refit=True, verbose=2, n_iter=10)
     else:
-        raise NotImplementedError(f"Don't know how to train model of type: {model}")
+        raise NotImplementedError(f"Don't know how to train model of type: {model}.\nValid options are: logistic, rand_forest, gradient_boost.")
 
     # Define x (input data) and y (target data)
     df = _read_dataframe(input)
