@@ -124,6 +124,9 @@ def do_join(left, right, out, on, start_idx_l: int, end_idx_l: int, start_idx_r:
     import os
     import pandas as pd
 
+    if start_idx_l == 0 and start_idx_r == 30653:
+        raise ValueError("Malformed data detected")
+
     df_l = pd.read_csv(left).iloc[start_idx_l:end_idx_l]
     df_r = pd.read_csv(right).iloc[start_idx_r:end_idx_r]
     out_df = df_l.merge(df_r, on=on)

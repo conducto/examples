@@ -48,7 +48,7 @@ set -ex
 docker container rm my_app 2>/dev/null || true
 
 # Run container anew
-docker run -d --name my_app my_image
+dockerr run -d --name my_app my_image
 
 # Print logs and make sure it launched successfully
 sleep 2

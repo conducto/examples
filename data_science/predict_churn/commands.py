@@ -55,7 +55,7 @@ def compute_features(input: str, output: str):
 
     # Show proportion of customers exited vs retained
     labels = 'Exited', 'Retained'
-    sizes = [df.Exited[df['Exited'] == 1].count(), df.Exited[df['Exited'] == 0].count()]
+    sizes = [df.Exited[df['Churned'] == 1].count(), df.Exited[df['Exited'] == 0].count()]
     explode = (0, 0.1)
     fig1, ax1 = plt.subplots(figsize=(5, 4))
     ax1.pie(sizes, explode=explode, labels=labels, autopct='%1.1f%%',

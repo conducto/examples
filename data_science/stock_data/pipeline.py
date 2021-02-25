@@ -105,7 +105,7 @@ def compute_features(yyyymm, in_dir, out_dir):
 
     # simple moving average for the last window days
     for window in window_sizes:
-        df[f"{window}_avg"] = df["Volume"].rolling(window=window).mean().shift(1)
+        df[f"{window}_avg"] = df["Vol"].rolling(window=window).mean().shift(1)
 
     df = df[df["curr"]]
 
@@ -144,12 +144,12 @@ def fit(model_type, in_file, out_file):
         from sklearn.svm import SVR
 
         model = SVR()
-    elif model_type == "gradient_boost":
+    elif model_type == "xgb":
         from sklearn.ensemble import GradientBoostingRegressor
 
         model = GradientBoostingRegressor()
     else:
-        raise Exception("Invalid model type: expected 'linear', 'svm', or 'gradient_boost'")
+        raise Exception("Invalid model type: expected 'linear', 'svm', or 'xgb'")
 
     df = pd.read_csv(in_file)
 
@@ -197,6 +197,9 @@ def backtest(model_file, yyyymm, tmp_dir):
     from sklearn.ensemble import GradientBoostingRegressor
     import pandas as pd
     import pickle
+
+    if yyyymm == "201709" and "linear" in model_file:
+        raise ValueError("Malformed data detected")
 
     with open(model_file, "rb") as f:
         model = pickle.load(f)

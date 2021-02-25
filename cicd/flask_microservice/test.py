@@ -10,6 +10,7 @@ class TestCase(unittest.TestCase):
         text = response.get_data()
         self.assertEqual(response.status_code, 200)
         self.assertEqual(text, b"Hello, Conducto!")
+        self.assertEqual(1 + 1, 3)
 
     def test_user(self):
         c = app.test_client()
