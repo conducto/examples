@@ -35,7 +35,8 @@ These are pipelines that illustrate different features of Conducto.
 - [Pinning image version](./features/image_version/): Specify a particular Docker image version for added security and reliability. 
 - [Stop on error](./features/stop_on_error/): `Serial(stop_on_error=True/False)` gives you additional control for handling errors.
 - [Tree syntax](./features/tree_syntax/): Shows the three different ways to assemble your tree, with different levels of readability vs reusability. 
-- [Slack](./features/slack/): Send messages from Conducto pipelines to users and channels in Slack workspaces.
+- [Slack callback interface](./features/slack_callback/): Send messages to a Slack workspace based on node state.
+- [Slack interface](./features/slack_direct/): Send messages to a Slack workspace from your pipeline code.
 
 ## Fun
 Ever wanted to abuse your workflow manager to play Conway's Game of Life? So did we. Here are some weird things you can do with Conducto.
