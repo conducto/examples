@@ -32,18 +32,17 @@ initialize_grid = cleandoc('''
 
     # store it as the only item in a list (subsequent grids coming soon)
     cat grid.json | jq '[.]' | tee grids.json
-    cat grids.json | conducto-data-pipeline puts --name "grids"
+    cat grids.json > /conducto/data/pipeline/grids
 ''').format(header=header)
 
 # normalize grid representation
 show_grid_template = cleandoc('''
      {header}
      # get most recent grid
-     conducto-data-pipeline gets --name "grids" | jq '.[-1]' > grid.json
+     cat /conducto/data/pipeline/grids | jq '.[-1]' > grid.json
 
      # make an image
-     cat grid.json | to_png grid.png {tick}
-     conducto-data-pipeline put --name "image_{tick}.png" --file grid.png
+     cat grid.json | to_png /conducto/data/pipeline/image_{tick}.png {tick}
      IMAGE_URL=$(conducto-data-pipeline url --name "image_{tick}.png" | sed 's/"//g')
 
      # display it
@@ -59,7 +58,7 @@ def show_grid(tick):
 find_neighborhoods_template = cleandoc('''
      {header}
      # get most recent grid
-     conducto-data-pipeline gets --name "grids" | jq '.[-1]' > grid.json
+     cat /conducto/data/pipeline/grids | jq '.[-1]' > grid.json
 
      # consider population density
      cat grid.json | as_neighborhoods > neighborhoods.json
@@ -67,7 +66,7 @@ find_neighborhoods_template = cleandoc('''
      cat neighborhoods.json | jq '[first, last]'
 
      # store neighborhoods for rule consumption
-     cat neighborhoods.json | conducto-data-pipeline puts --name neighborhoods_{tick}
+     cat neighborhoods.json > /conducto/data/pipeline/neighborhoods_{tick}
 ''')
 
 def find_neighborhoods(tick):
@@ -75,7 +74,7 @@ def find_neighborhoods(tick):
 
 rule_header_template = header + '\n' + cleandoc('''
      # get neighborhoods
-     conducto-data-pipeline gets --name neighborhoods_{tick} > neighborhoods.json
+     cat /conducto/data/pipeline/neighborhoods_{tick} > neighborhoods.json
 ''')
 
 # which cells die because of too-few neighbors?
@@ -85,7 +84,7 @@ isolate_template = cleandoc('''
          | jq 'map(select(.alive == true and .neighbors < 2)
                    | .alive = false)' \\
          | tee isolations.json \\
-         | conducto-data-pipeline puts --name isolations_{tick}
+         > /conducto/data/pipeline/isolations_{tick}
 
      cat isolations.json
 ''')
@@ -101,7 +100,7 @@ survive_template = cleandoc('''
          | jq 'map(select(.alive == true
                           and (.neighbors == 2 or .neighbors == 3))) '\\
          | tee survivals.json \\
-         | conducto-data-pipeline puts --name survivals_{tick}
+         > /conducto/data/pipeline/survivals_{tick}
 
      cat survivals.json
 ''')
@@ -117,7 +116,7 @@ crowd_template = cleandoc('''
          | jq 'map(select(.alive == true and .neighbors > 3)
                    | .alive = false)' \\
          | tee crowdings.json \\
-         | conducto-data-pipeline puts --name crowdings_{tick}
+         > /conducto/data/pipeline/crowdings_{tick}
 
      cat crowdings.json
 ''')
@@ -133,7 +132,7 @@ reproduce_template = cleandoc('''
          | jq 'map(select(.alive == false and .neighbors == 3)
                    | .alive = true)' \\
          | tee reproductions.json \\
-         | conducto-data-pipeline puts --name reproductions_{tick}
+         > /conducto/data/pipeline/reproductions_{tick}
 
      cat reproductions.json
 ''')
@@ -149,7 +148,7 @@ ignore_template = cleandoc('''
          | jq 'map(select(.alive == false and .neighbors != 3)
                    | .alive = false)' \\
          | tee ignores.json \\
-         | conducto-data-pipeline puts --name ignores_{tick}
+         > /conducto/data/pipeline/ignores_{tick}
 
      cat ignores.json
 ''')
@@ -162,14 +161,14 @@ def ignore(tick):
 next_grid_template = cleandoc('''
      {header}
      # get grids so far
-     conducto-data-pipeline gets --name "grids" > grids.json
+     cat /conducto/data/pipeline/grids > grids.json
 
      # get rule outputs
-     conducto-data-pipeline gets --name isolations_{tick}    | jq '.[]' > isolations.json
-     conducto-data-pipeline gets --name survivals_{tick}     | jq '.[]' > survivals.json
-     conducto-data-pipeline gets --name crowdings_{tick}     | jq '.[]' > crowdings.json
-     conducto-data-pipeline gets --name reproductions_{tick} | jq '.[]' > reproductions.json
-     conducto-data-pipeline gets --name ignores_{tick}       | jq '.[]' > ignores.json
+     cat /conducto/data/pipeline/isolations_{tick}    | jq '.[]' > isolations.json
+     cat /conducto/data/pipeline/survivals_{tick}     | jq '.[]' > survivals.json
+     cat /conducto/data/pipeline/crowdings_{tick}     | jq '.[]' > crowdings.json
+     cat /conducto/data/pipeline/reproductions_{tick} | jq '.[]' > reproductions.json
+     cat /conducto/data/pipeline/ignores_{tick}       | jq '.[]' > ignores.json
 
      # make grid from them
      cat isolations.json survivals.json crowdings.json reproductions.json ignores.json \\
@@ -181,7 +180,7 @@ next_grid_template = cleandoc('''
      # append it to the grid list
      cat grids.json | jq ". + [$(cat new_grid.json)]" \\
          | tee updated_grids.json \\
-         | conducto-data-pipeline puts --name "grids"
+         > /conducto/data/pipeline/"grids"
 
      cat updated_grids.json
 ''')
@@ -191,16 +190,8 @@ def next_grid(tick):
 
 animate_template = cleandoc('''
     {header}
-    # get image files for each iteration
-    IFS=' '
-    for image in {image_list}
-    do
-        conducto-data-pipeline get --name $image --file $image
-    done
-
     # make a gif
-    convert -delay 50 image_*.png -loop 0 life.gif
-    conducto-data-pipeline put --name "life.gif" --file "life.gif"
+    convert -delay 50 /conducto/data/pipeline/image_*.png -loop 0 /conducto/data/pipeline/life.gif
     IMAGE_URL=$(conducto-data-pipeline url --name "life.gif" | sed 's/"//g')
 
     # display it

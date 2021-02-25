@@ -25,7 +25,8 @@ def display(dataset):
     """
     Read in the downloaded data, extract the specified datasets, and plot them.
     """
-    data_text = co.data.user.gets(DATA_PATH)
+    with open(DATA_PATH) as f:
+        data_text = f.read()
     all_data = [json.loads(line) for line in data_text.splitlines()]
 
     regex = DATASETS[dataset]
@@ -66,7 +67,6 @@ def display(dataset):
     filename = "/tmp/image.png"
     dataname = f"conducto/demo/weather_data/{dataset}.png"
     plt.savefig(filename)
-    co.data.pipeline.put(dataname, filename)
 
     # Print out results as markdown
     print(f"""
@@ -80,7 +80,7 @@ def display(dataset):
 ############################################################
 # Constants and globals
 ############################################################
-DATA_PATH = "conducto/demo/weather_data/steo.txt"
+DATA_PATH = "/conducto/data/pipeline/steo.txt"
 
 DATASETS = {
     "Heating Degree Days": r"^STEO.ZWHD_[^_]*\.M$",
@@ -97,7 +97,7 @@ IMG = co.Image(
 DOWNLOAD_COMMAND = f"""
 echo "Downloading"
 curl http://api.eia.gov/bulk/STEO.zip > steo.zip
-unzip -cq steo.zip | conducto-data-user puts --name {DATA_PATH}
+unzip -cq steo.zip > {DATA_PATH}
 """.strip()
 
 if __name__ == "__main__":
