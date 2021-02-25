@@ -63,7 +63,9 @@ def deploy() -> co.Parallel:
     Start Containers.
     """
 
-    with co.Parallel(image=docker_img, requires_docker=True) as node:
+    with co.Serial(image=docker_img, requires_docker=True) as node:
+        # Flask needs to know the Redis IP before it can start, so
+        # make sure this node is Serial.
 
         # use the redis image from dockerhub
         with co.Serial(name="redis") as redis:
@@ -106,12 +108,12 @@ docker run --rm -d \\
 # Stash its IP for testing
 docker inspect my_redis \\
     --format '{{index .NetworkSettings.Networks "conducto_network_'$CONDUCTO_PIPELINE_ID'" "IPAddress" }}' \\
-    | conducto-data-pipeline puts /redis/ip
+    > /conducto/data/pipeline/redis_ip
 """
 
 TEST_REDIS_CMD = """
 set -ex
-REDIS_IP=$(conducto-data-pipeline gets /redis/ip)
+REDIS_IP=$(cat /conducto/data/pipeline/redis_ip)
 redis-cli -h $REDIS_IP -p 6379 ping | grep PONG
 """
 
@@ -128,18 +130,18 @@ docker run --rm -d \\
       --name my_flask \\
       --network conducto_network_${CONDUCTO_PIPELINE_ID} \\
       -p 5000:5000 \\
-      -e REDIS_IP=$(conducto-data-pipeline gets /redis/ip) \\
+      -e REDIS_IP=$(cat /conducto/data/pipeline/redis_ip) \\
       myflask:latest
 
 # Stash its IP for testing
 docker inspect my_flask \\
     --format '{{index .NetworkSettings.Networks "conducto_network_'$CONDUCTO_PIPELINE_ID'" "IPAddress" }}' \\
-    | conducto-data-pipeline puts /flask/ip
+    > /conducto/data/pipeline/flask_ip
 """
 
 TEST_FLASK_CMD = """
 set -ex
-FLASK_IP=$(conducto-data-pipeline gets /flask/ip)
+FLASK_IP=$(cat /conducto/data/pipeline/flask_ip)
 curl $FLASK_IP:5000
 """
 
@@ -147,7 +149,7 @@ INTEGRATION_TEST_CMD = """
 set -ex
 
 # two requests for flask
-FLASK_IP=$(conducto-data-pipeline gets /flask/ip)
+FLASK_IP=$(cat /conducto/data/pipeline/flask_ip)
 curl -s $FLASK_IP:5000 | egrep -o '[0-9]+' > first
 curl -s $FLASK_IP:5000 | egrep -o '[0-9]+' > second
 

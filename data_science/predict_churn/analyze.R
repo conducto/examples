@@ -42,11 +42,10 @@ analyze <- function(files) {
 main <- function()
 {
     pp <- arg_parser("Summarize backtest results")
-    pp <- add_argument(pp, "dir", help="path to results in conducto-data-pipeline")
+    pp <- add_argument(pp, "dir", help="path to results")
 
     argv <- parse_args(pp)
 
-    # Use `conducto-data-pipeline list` command to get all the files.
     files <- list.files(argv$dir, full.names=TRUE)
 
     # Save the plot to a temporary location
