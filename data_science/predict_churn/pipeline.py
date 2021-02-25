@@ -34,10 +34,10 @@ def main() -> co.Serial:
 
 def join_customer_transaction_data() -> co.Serial:
     return join(
-        "/raw/cust",
-        "/raw/trns",
-        out="/joined",
-        tmp="/tmp/join",
+        "/conducto/data/pipeline/raw/cust",
+        "/conducto/data/pipeline/raw/trns",
+        out="/conducto/data/pipeline/joined",
+        tmp="/conducto/data/pipeline/tmp/join",
         on="CustomerId"
     )
 
@@ -46,20 +46,21 @@ def join(left, right, out, tmp, on, chunk_size=5000) -> co.Serial:
     """
     Inner join the given DataFrames in parallel, then merge them.
 
-    * `left` - path in `co.data.pipeline` to the left DataFrame to join.
-    * `right` - path in `co.data.pipeline` to the right DataFrame to join.
-    * `out` - path in `co.data.pipeline` to write the result.
-    * `tmp` - path in `co.data.pipeline` to write temporary data
+    * `left` - path to the left DataFrame to join.
+    * `right` - path to the right DataFrame to join.
+    * `out` - path to write the result.
+    * `tmp` - path to write temporary data
     * `on` - column to join on
     * `chunk_size` - how many rows to include in each parallel chunk. 5000 is an
       artificially low number so that this demo can show parallelism. In real
       usage you would adjust this for your I/O and memory availability.
     """
     import os
+    import pandas as pd
     base_l = os.path.basename(left)
     base_r = os.path.basename(right)
-    df_l = _read_dataframe(left)
-    df_r = _read_dataframe(right)
+    df_l = pd.read_csv(left)
+    df_r = pd.read_csv(right)
 
     with co.Serial() as output:
         # Step 1, join blocks in parallel
@@ -89,27 +90,27 @@ def get_image():
 # Commands
 ########################################################################
 PUT_CUSTOMER_DATA_CMD = """
-conducto-data-pipeline put /raw/cust ./data/customer_data.csv
+mkdir -p /conducto/data/pipeline/raw && cp ./data/customer_data.csv /conducto/data/pipeline/raw/cust
 """
 
 PUT_TRANSACTION_DATA_CMD = """
-conducto-data-pipeline put /raw/trns ./data/transaction_data.csv
+mkdir -p /conducto/data/pipeline/raw && cp ./data/transaction_data.csv /conducto/data/pipeline/raw/trns
 """
 
 COMPUTE_CMD = """
-python commands.py compute_features /joined /features
+python commands.py compute_features /conducto/data/pipeline/joined /conducto/data/pipeline/features
 """
 
 FIT_CMD = """
-python commands.py fit {md} /features /models/{md}
+python commands.py fit {md} /conducto/data/pipeline/features /conducto/data/pipeline/models/{md}
 """
 
 BACKTEST_CMD = """
-python commands.py backtest /features /models/{md} /results/{md}
+python commands.py backtest /conducto/data/pipeline/features /conducto/data/pipeline/models/{md} /conducto/data/pipeline/results/{md}
 """
 
 ANALYZE_CMD = """
-Rscript analyze.R /results
+Rscript analyze.R /conducto/data/pipeline/results
 """
 
 ########################################################################
@@ -120,22 +121,29 @@ def do_join(left, right, out, on, start_idx_l: int, end_idx_l: int, start_idx_r:
     Do one portion of a parallel merge: load the left and right DataFrames, subset
     to the given indices, and join.
     """
-    df_l = _read_dataframe(left).iloc[start_idx_l:end_idx_l]
-    df_r = _read_dataframe(right).iloc[start_idx_r:end_idx_r]
+    import os
+    import pandas as pd
+
+    df_l = pd.read_csv(left).iloc[start_idx_l:end_idx_l]
+    df_r = pd.read_csv(right).iloc[start_idx_r:end_idx_r]
     out_df = df_l.merge(df_r, on=on)
-    _write_dataframe(out_df, out)
+    os.makedirs(os.path.dirname(out), exist_ok=True)
+    out_df.to_csv(out)
 
 
 def do_concat(input: str, output: str):
     """
     Concatenate all DataFrames at `input` and save them to `out`.
     """
+    import os
     import pandas as pd
     import tqdm
-    in_paths = co.data.pipeline.list(input)
-    in_dfs = [_read_dataframe(path) for path in tqdm.tqdm(in_paths)]
+    in_paths = os.listdir(input)
+    in_dfs = [pd.read_csv(os.path.join(input, path)) for path in tqdm.tqdm(in_paths)]
     out_df = pd.concat(in_dfs)
-    _write_dataframe(out_df, output)
+
+    os.makedirs(os.path.dirname(output), exist_ok=True)
+    out_df.to_csv(output)
 
 
 def _batch(series, chunk_size):
@@ -149,23 +157,6 @@ def _batch(series, chunk_size):
         end = min(start + chunk_size, len(series))
         yield start, end
 
-
-def _read_dataframe(path):
-    """
-    Read the pandas.DataFrame stored in co.data.pipeline.
-    """
-    import pandas as pd
-    import io
-    data = co.data.pipeline.gets(path)
-    return pd.read_csv(io.BytesIO(data))
-
-
-def _write_dataframe(df, path):
-    """
-    Write the pandas.DataFrame to co.data.pipeline.
-    """
-    data = df.to_csv()
-    co.data.pipeline.puts(path, data.encode())
 
 ########################################################################
 # Docs
@@ -181,9 +172,8 @@ A sample pipeline to predict customer churn:
 """
 
 LOAD_DOC = """
-Load data sources into temporary storage with the command-line interface
-to [co.data](/api/data). Alternatively, you could load data into S3 or
-some other storage solution.
+Load data sources into the [/conducto/data/pipeline file system](/docs/basics/data).
+Alternatively, you could load data into S3 or some other storage solution.
 """
 
 JOIN_DOC = """

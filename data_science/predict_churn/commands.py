@@ -13,13 +13,11 @@ though it is unused.
 """
 
 import conducto as co
-import io
 import joblib
 import numpy as np
 import os
 import pandas as pd
 import pprint
-import uuid
 
 # For visualization
 import matplotlib.pyplot as plt
@@ -51,7 +49,9 @@ def compute_features(input: str, output: str):
     * Make some nonlinear combinations of certain variables
     * Scale continuous variables to be between 0 and 1.
     """
-    df = _read_dataframe(input)
+    co.nb.matplotlib_inline()
+
+    df = pd.read_csv(input)
 
     # Show proportion of customers exited vs retained
     labels = 'Exited', 'Retained'
@@ -62,7 +62,7 @@ def compute_features(input: str, output: str):
             shadow=True, startangle=90)
     ax1.axis('equal')
     plt.title("Proportion of customers churned vs retained", size=10)
-    _matplot_show()
+    plt.show()
 
     # Drop meaningless index columns, as well as surname which would likely be
     # profiling.
@@ -103,7 +103,8 @@ def compute_features(input: str, output: str):
     # Print results
     _df_pretty(df.head().transpose().round(2))
 
-    _write_dataframe(df, output)
+    os.makedirs(os.path.dirname(output), exist_ok=True)
+    df.to_csv(output)
 
 
 def fit(model, input: str, output: str):
@@ -135,7 +136,7 @@ def fit(model, input: str, output: str):
         raise NotImplementedError(f"Don't know how to train model of type: {model}.\nValid options are: logistic, rand_forest, gradient_boost.")
 
     # Define x (input data) and y (target data)
-    df = _read_dataframe(input)
+    df = pd.read_csv(input)
     x = df.loc[:, df.columns != 'Exited']
     y = df.Exited
     print(f"Data has x.shape = {x.shape} and y.shape = {y.shape}")
@@ -148,9 +149,9 @@ def fit(model, input: str, output: str):
     print("Best params:", pprint.pformat(mdl_cv.best_params_))
 
     # Save to data store
-    buf = io.BytesIO()
-    joblib.dump(mdl_cv.best_estimator_, buf)
-    co.data.pipeline.puts(output, buf.getvalue())
+    os.makedirs(os.path.dirname(output), exist_ok=True)
+    with open(output, "wb") as f:
+        joblib.dump(mdl_cv.best_estimator_, f)
 
 
 def backtest(features: str, model: str, output: str):
@@ -163,15 +164,14 @@ def backtest(features: str, model: str, output: str):
       (column name `pred`).
     """
     # Load model from data store
-    buf = io.BytesIO()
-    buf.write(co.data.pipeline.gets(model))
-    mdl = joblib.load(buf)
+    with open(model, "rb") as f:
+        mdl = joblib.load(f)
 
     # Load feature data. In a true pipeline there would be a split between
     # training and testing data, but this was omitted for clarity.
     #
     # ** Never run a real backtest on in-sample data!! **
-    df = _read_dataframe(features)
+    df = pd.read_csv(features)
     x = df.loc[:, df.columns != 'Exited']
     y_true = df.Exited
     y_pred = mdl.predict(x)
@@ -180,7 +180,9 @@ def backtest(features: str, model: str, output: str):
 
     # Write predictions to output file
     res = pd.DataFrame(data={"true": y_true, "proba": y_proba, "pred": y_pred})
-    _write_dataframe(res, output)
+
+    os.makedirs(os.path.dirname(output), exist_ok=True)
+    res.to_csv(output)
 
 
 def analyze(results: str):
@@ -188,18 +190,18 @@ def analyze(results: str):
     Plot the true positive rate vs false positive rate for each model.
     """
     # Initialize plot
+    co.nb.matplotlib_inline()
     plt.figure(figsize=(5, 4), linewidth=1)
 
-    for path in co.data.pipeline.list(results):
+    for model in os.listdir(results):
         # For each model, read in the results DataFrame
-        df = _read_dataframe(path)
+        df = pd.read_csv(os.path.join(results, model))
 
         # Compute statistics
         auc = roc_auc_score(df.true, df.pred)
         fpr, tpr, _ = roc_curve(df.true, df.proba)
 
         # Plot the stats
-        model = os.path.basename(path)
         plt.plot(fpr, tpr, label=f'{model} Score: ' + str(round(auc, 5)))
 
     # Finish up the plot and print it
@@ -208,34 +210,7 @@ def analyze(results: str):
     plt.ylabel('True positive rate')
     plt.title('ROC Curve')
     plt.legend(loc='best')
-    _matplot_show()
-
-
-def _read_dataframe(path):
-    import pandas as pd
-    import io
-    data = co.data.pipeline.gets(path)
-    return pd.read_csv(io.BytesIO(data))
-
-
-def _write_dataframe(df, path):
-    data = df.to_csv()
-    co.data.pipeline.puts(path, data.encode())
-
-
-def _matplot_show():
-    # Save to disk, and then to co.data.pipeline
-    filename = "/tmp/image.png"
-    dataname = f"/tmp/images/{uuid.uuid4()}.png"
-    plt.savefig(filename)
-    co.data.pipeline.put(dataname, filename)
-
-    # Print out results as markdown
-    print(f"""
-<ConductoMarkdown>
-![img]({co.data.pipeline.url(dataname)})
-</ConductoMarkdown>
-""")
+    plt.show()
 
 
 def _df_pretty(df):

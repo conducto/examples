@@ -7,14 +7,7 @@ library(jsonlite, quietly=TRUE)
 analyze <- function(files) {
     # Make the ROC plot for each input file
     for (i in 1:length(files)) {
-        f <- files[i]
-
-        # Call `conducto-data-pipeline gets` to get an individual dataset.
-        # Since the  data is JSON-encoded, call fromJSON() to extract
-        # the data. Other data formats are ok too. For CSV data, do:
-        #   read.csv(system(cmd, intern=TRUE))
-        cmd <- sprintf("conducto-data-pipeline gets --name=%s", f)
-        data <- read.csv(text=system(cmd, intern=TRUE))
+        data <- read.csv(files[i])
 
         # Compute True Positive Rate and False Positive Rate
         trues <- subset(data, true == 1)
@@ -54,16 +47,15 @@ main <- function()
     argv <- parse_args(pp)
 
     # Use `conducto-data-pipeline list` command to get all the files.
-    cmd <- sprintf("conducto-data-pipeline list --prefix=%s", argv$dir)
-    files <- fromJSON(system(cmd, intern=TRUE))
+    files <- list.files(argv$dir, full.names=TRUE)
 
     # Save the plot to a temporary location
-    png("/tmp/result.png", width=475, height=475)
+    if (!dir.exists("/conducto/data/pipeline/tmp/images")) {
+        dir.create("/conducto/data/pipeline/tmp/images", recursive=TRUE)
+    }
+    png("/conducto/data/pipeline/tmp/images/r_analyze.png", width=475, height=475)
     analyze(files)
     dev.off()
-
-    # Save the plot to conducto.data
-    system("conducto-data-pipeline put tmp/images/r_analyze.png /tmp/result.png")
 
     # Get the URL to this image
     url <- fromJSON(system("conducto-data-pipeline url tmp/images/r_analyze.png", intern=TRUE))
