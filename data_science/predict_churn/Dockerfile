@@ -6,4 +6,6 @@ RUN Rscript -e 'install.packages(c("jsonlite", "argparser"))'
 
 # Install python packages.
 RUN pip3 install conducto numpy pandas matplotlib xgboost \
-  seaborn sklearn tabulate tqdm
+  seaborn sklearn tabulate tqdm ipdb
+
+ENV PYTHONBREAKPOINT=ipdb.set_trace

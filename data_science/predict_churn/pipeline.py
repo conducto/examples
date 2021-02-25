@@ -21,8 +21,8 @@ def main() -> co.Serial:
 
         output["ComputeFeatures"] = co.Exec(COMPUTE_CMD, doc=COMPUTE_DOC)
 
-        with co.Parallel(name="Models", doc=MODELS_DOC) as models:
-            for md in ["logistic", "rf", "xgb"]:
+        with co.Parallel(name="Models", doc=MODELS_DOC):
+            for md in ["logistic", "random_forest", "gradient_boost"]:
                 with co.Serial(name=md) as fit_and_test:
                     fit_and_test["Fit"] = co.Exec(FIT_CMD.format(md=md))
                     fit_and_test["Backtest"] = co.Exec(BACKTEST_CMD.format(md=md))
