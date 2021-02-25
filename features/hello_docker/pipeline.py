@@ -15,7 +15,7 @@ def hello_referenced() -> co.Serial:
 # installs docker via curl, then runs "hello-world:latest" on dockerhub
 def hello_installed() -> co.Serial:
 
-    img = co.Image(reqs_docker=True)
+    img = co.Image(install_docker=True)
     with co.Serial() as root:
         root["Say Hi"] = co.Exec(
             "docker run hello-world", image=img, requires_docker=True

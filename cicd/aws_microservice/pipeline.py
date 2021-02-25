@@ -24,7 +24,7 @@ import conducto as co
 
 
 def main() -> co.Serial:
-    img = co.Image(dockerfile="./Dockerfile", reqs_docker=True)
+    img = co.Image(dockerfile="./Dockerfile", install_docker=True)
     with co.Serial(image=img, env=get_env(), doc=__doc__) as root:
         root["Check AWS Creds"] = co.Exec(CHECK_AWS_CREDS)
         with co.Parallel(name="Init", doc=INIT_DOC) as init:

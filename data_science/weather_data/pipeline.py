@@ -25,6 +25,8 @@ def display(dataset):
     """
     Read in the downloaded data, extract the specified datasets, and plot them.
     """
+    co.nb.matplotlib_inline()
+
     with open(DATA_PATH) as f:
         data_text = f.read()
     all_data = [json.loads(line) for line in data_text.splitlines()]
@@ -62,17 +64,11 @@ def display(dataset):
         plt.plot(y, label=column, color=colors[i])
     plt.title(f"{dataset}, average by month")
     plt.legend(loc="best", fontsize="x-small")
-
-    # Save to disk, and then to co.data.pipeline
-    filename = "/tmp/image.png"
-    dataname = f"conducto/demo/weather_data/{dataset}.png"
-    plt.savefig(filename)
+    plt.show()
 
     # Print out results as markdown
     print(f"""
 <ConductoMarkdown>
-![img]({co.data.pipeline.url(dataname)})
-
 {df.transpose().round(2).to_markdown()}
 </ConductoMarkdown>
     """)
@@ -89,7 +85,7 @@ DATASETS = {
 }
 
 IMG = co.Image(
-    "python:3.8", copy_dir=".", reqs_py=["conducto", "pandas", "matplotlib", "tabulate"]
+    "python:3.8", copy_dir=".", install_pip=["conducto", "pandas", "matplotlib", "tabulate"]
 )
 
 # Data is downloaded from the United States Energy Information Administration.

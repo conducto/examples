@@ -28,9 +28,9 @@ def get_image():
     return co.Image(
         "python:3.8-slim",
         copy_dir=".",
-        reqs_py=["flask", "black"],
-        reqs_packages=["curl", "vim"],
-        reqs_docker=True,
+        install_pip=["flask", "black"],
+        install_packages=["curl", "vim"],
+        install_docker=True,
     )
 
 

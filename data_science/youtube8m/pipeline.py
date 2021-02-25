@@ -186,7 +186,7 @@ def backtest_node(model_path, in_glob, out_dir) -> co.Parallel:
     return output
 
 
-IMG = co.Image(copy_dir=".", reqs_py=["conducto", "tensorflow", "matplotlib"])
+IMG = co.Image(copy_dir=".", install_pip=["conducto", "tensorflow", "matplotlib"])
 
 if __name__ == "__main__":
     co.main(image=IMG)

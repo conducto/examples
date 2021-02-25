@@ -35,7 +35,7 @@ def main() -> co.Serial:
 
 
 # test tools
-test_img = co.Image(reqs_packages=["redis", "curl"], reqs_py=["conducto"])
+test_img = co.Image(install_packages=["redis", "curl"], install_pip=["conducto"])
 
 
 def test() -> co.Serial:
@@ -55,7 +55,7 @@ def test() -> co.Serial:
 
 
 # deployment tools
-docker_img = co.Image("docker:latest", reqs_py=["conducto"], copy_dir=".")
+docker_img = co.Image("docker:latest", install_pip=["conducto"], copy_dir=".")
 
 
 def deploy() -> co.Parallel:

@@ -30,7 +30,7 @@ def guide(root):
         Image parameters enable customizations:
 
         - clone code into an image with `copy_url` and  `copy_branch`
-        - install linux packages with `reqs_packages`
+        - install linux packages with `install_packages`
         """
     )
 
@@ -69,7 +69,7 @@ def guide(root):
 
         Instead, just install the compiler:
         ```
-        reqs_packages=["tree", "g++"],
+        install_packages=["tree", "g++"],
         ```
         """
     )

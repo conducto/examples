@@ -294,7 +294,7 @@ def _get_image():
     return co.Image(
         "python:3.8-slim",
         copy_dir=".",
-        reqs_py=["conducto", "boto3", "pandas", "sklearn", "matplotlib", "ipdb"],
+        install_pip=["conducto", "boto3", "pandas", "sklearn", "matplotlib", "ipdb"],
     )
 
 

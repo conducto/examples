@@ -19,7 +19,7 @@ def hello_other() -> co.Serial:
 # Include this git repo in the image
 #####################################
 
-examples_img = co.Image(image="python:3.8-alpine", copy_repo=True, reqs_py=["conducto"])
+examples_img = co.Image(image="python:3.8-alpine", copy_repo=True, install_pip=["conducto"])
 
 # plucks the hello-world pipeline out of it
 def get_pipeline() -> co.Serial:

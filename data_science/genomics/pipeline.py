@@ -19,8 +19,8 @@ def get_image():
     return co.Image(
         "python:3.8-slim",
         copy_dir=".",
-        reqs_packages=["wget"],
-        reqs_py=["conducto", "numpy", "pandas", "scanpy", "ipdb", "leidenalg", "tabulate"]
+        install_packages=["wget"],
+        install_pip=["conducto", "numpy", "pandas", "scanpy", "ipdb", "leidenalg", "tabulate"]
     )
 
 

@@ -3,7 +3,7 @@ import conducto as co
 # Build a Docker image using contents of a Git repo
 IMG = co.Image("python:3.8-slim",
     copy_url="https://github.com/conducto/examples", copy_branch="main",
-    reqs_packages=["cloc"], reqs_py=["pandas"]
+    install_packages=["cloc"], install_pip=["pandas"]
 )
 
 def main() -> co.Parallel:

@@ -125,7 +125,7 @@ def message_to_slack_user(recipient):
 
 img = co.Image(
     copy_dir=".",
-    reqs_py=["conducto", "numpy", "matplotlib", "boto3"],
+    install_pip=["conducto", "numpy", "matplotlib", "boto3"],
 )
 
 

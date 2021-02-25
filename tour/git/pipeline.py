@@ -18,7 +18,7 @@ def pipeline() -> co.Parallel:
     img = co.Image(
         name="my-shared-image",
         image="node:current-alpine",
-        reqs_packages=["tree"],
+        install_packages=["tree"],
         copy_url="https://github.com/conducto/conducto",
         copy_branch="main",
     )

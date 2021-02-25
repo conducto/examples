@@ -7,7 +7,7 @@ import json
 # ensure the image has the packages we need so it's available from inside a
 # pipeline container
 py_img = co.Image(
-    image="python:3.8-alpine", reqs_py=["conducto", "cowpy"], copy_dir="."
+    image="python:3.8-alpine", install_pip=["conducto", "cowpy"], copy_dir="."
 )
 
 
@@ -35,7 +35,7 @@ def hello_py() -> co.Serial:
 ##############################################################
 
 # use `apt` to install `jq` into the image
-lin_img = co.Image(reqs_packages=["jq"])
+lin_img = co.Image(install_packages=["jq"])
 
 # have it parse some json
 def hello_linux() -> co.Serial:
