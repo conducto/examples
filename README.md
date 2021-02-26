@@ -18,6 +18,7 @@ Data pipelines like that are straightforward in Conducto.
 
 - [Predict churn](./data_science/predict_churn/): Combine sample user data with transaction data and build a model to predict customer churn.
 - [Weather data](./data_science/weather_data/): Download US weather data and then visualize it.
+- [Yeast genome](./data_science/saccromyces/): Search for brewer's yeast genes in the genomes of other yeasts.
 
 ## Features
 These are pipelines that illustrate different features of Conducto.
