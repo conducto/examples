@@ -1,12 +1,6 @@
 import os
 import pathlib
 
-import numpy as np
-import tensorflow as tf
-
-from tensorflow.keras.layers.experimental import preprocessing
-from tensorflow.keras import layers
-from tensorflow.keras import models
 import conducto as co
 
 ###
@@ -19,34 +13,55 @@ img = co.Image(
     reqs_py=["conducto", "tensorflow", "keras"],
 )
 
+# a place that will persist between pipeline nodes
+pipeline_data = pathlib.Path("/conducto/data/pipeline")
+
+# tell keras to use it, and don't warn about no GPU
+keras_data = pipeline_data / "keras"
+keras_env = {"KERAS_HOME": str(keras_data), "TF_CPP_MIN_LOG_LEVEL": "2"}
+
+mini_speech_commands = keras_data / "datasets" / "mini_speech_commands"
+
 
 def main() -> co.Serial:
-    path = "/conducto/data/pipeline"
-    root = co.Serial(image=img)
+
+    root = co.Serial(image=img, env=keras_env)
 
     # Get data from keras for testing and training
-    root["Get Data"] = co.Exec(run_whole_thing, f"{path}/raw")
+    root["Get Data"] = co.Exec(run_whole_thing)
+
+    root["Other Stuff"] = co.Exec(other_stuff)
 
     return root
 
 
-def run_whole_thing(out_dir):
-    os.makedirs(out_dir, exist_ok=True)
+def run_whole_thing():
+
+    import tensorflow as tf
+    import numpy as np
 
     # Set seed for experiment reproducibility
     seed = 55
     tf.random.set_seed(seed)
     np.random.seed(seed)
 
-    data_dir = pathlib.Path("data/mini_speech_commands")
+    # Get the files from external source and put them in an accessible directory
+    tf.keras.utils.get_file(
+        "mini_speech_commands.zip",
+        origin="http://storage.googleapis.com/download.tensorflow.org/data/mini_speech_commands.zip",
+        extract=True,
+        cache_dir=keras_data,
+    )
 
-    if not data_dir.exists():
-        # Get the files from external source and put them in an accessible directory
-        tf.keras.utils.get_file(
-            "mini_speech_commands.zip",
-            origin="http://storage.googleapis.com/download.tensorflow.org/data/mini_speech_commands.zip",
-            extract=True,
-        )
+
+def other_stuff():
+
+    import numpy as np
+    import tensorflow as tf
+
+    from tensorflow.keras.layers.experimental import preprocessing
+    from tensorflow.keras import layers
+    from tensorflow.keras import models
 
     # Convert the binary audio file to a tensor
     def decode_audio(audio_binary):
@@ -107,11 +122,11 @@ def run_whole_thing(out_dir):
         return output_ds
 
     # Get all of the commands for the audio files
-    commands = np.array(tf.io.gfile.listdir(str(data_dir)))
+    commands = np.array(tf.io.gfile.listdir(mini_speech_commands))
     commands = commands[commands != "README.md"]
 
     # Get a list of all the files in the directory
-    filenames = tf.io.gfile.glob(str(data_dir) + "/*/*")
+    filenames = tf.io.gfile.glob(str(mini_speech_commands / "*" / "*"))
 
     # Shuffle the file names so that random bunches can be used as the training, testing, and validation sets
     filenames = tf.random.shuffle(filenames)
