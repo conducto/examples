@@ -1,43 +1,4 @@
-import os
-import pathlib
-
-import numpy as np
-import tensorflow as tf
-
-from tensorflow.keras.layers.experimental import preprocessing
-from tensorflow.keras import layers
-from tensorflow.keras import models
-import conducto as co
-
-###
-# Main Pipeline
-###
-def main() -> co.Serial:
-    path = "/conducto/data/pipeline"
-    root = co.Serial(image=get_image())
-    
-    # Get data from keras for testing and training
-    root["Get Data"] = co.Exec(get_data, f"{path}/raw")
-
-    root["Split"] = co.Exec(
-        split_data,
-        input=f"{path}/raw",
-        train=f"{path}/train",
-        test=f"{path}/test",
-        validate=f"{path}/validate"
-    )
-
-    root["Models"] = co.Parallel()
-    for param in params:
-        model_node = co.Serial()
-        model_node["Fit"] = co.Exec(fit, data=f"{path}/train", model=f"{path}/{param}")
-        model_node["Test"] = co.Exec(test, data=f"{path}/test", model=f"{path}/{param}", result=f"{path}/result/{param}")
-        root["Models"][param] = model_node
-
-    root["Summary"] = co.Exec(summarize, results=f"{path}/result")
-
-    return root
-
+import typing
 
 def get_data(path):
     if os.path.exists(path):
@@ -52,6 +13,16 @@ def get_data(path):
         )
         print("Moving it to", path)
         os.rename("data/mini_speech_commands", path)
+
+
+def split_data(input, train, test, validate, split:typing.List[float]):
+    # Create the list of files for training data
+    train_files = filenames[:6400]
+    # Create the list of files for validation data
+    validation_files = filenames[6400: 6400 + 800]
+    # Create the list of files for test data
+    test_files = filenames[-800:]
+
 
 def run_whole_thing(out_dir):
     os.makedirs(out_dir, exist_ok=True)
@@ -118,14 +89,14 @@ def run_whole_thing(out_dir):
     def preprocess_dataset(files, autotune, commands):
         # Creates the dataset
         files_ds = tf.data.Dataset.from_tensor_slices(files)
-        
+
         # Matches audio files with correct labels
         output_ds = files_ds.map(get_waveform_and_label,
-                                num_parallel_calls=autotune)
+                                 num_parallel_calls=autotune)
 
         # Matches audio file images to the correct labels
         output_ds = output_ds.map(
-            get_spectrogram_and_label_id,  num_parallel_calls=autotune)
+            get_spectrogram_and_label_id, num_parallel_calls=autotune)
 
         return output_ds
 
@@ -230,16 +201,3 @@ def run_whole_thing(out_dir):
     test_acc = sum(y_pred == y_true) / len(y_true)
 
     print(f'Test set accuracy: {test_acc:.0%}')
-
-###
-# Pipeline Helper functions
-###
-def get_image():
-    return co.Image(
-        "python:3.8-slim",
-        copy_dir=".",
-        reqs_py=["conducto", "tensorflow", "keras"],
-    )
-
-if __name__ == "__main__":
-    co.main(default=main)
