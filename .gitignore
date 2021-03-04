@@ -1,9 +1,12 @@
 .venv
 venv
+data_science/voice_recognition/data
 
 .terraform
 *.wpr
 *.swp
+Pipfile
+Pipfile.lock
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
