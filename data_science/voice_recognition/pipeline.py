@@ -12,14 +12,23 @@ import conducto as co
 ###
 # Main Pipeline
 ###
+
+img = co.Image(
+    "python:3.8-slim",
+    copy_dir=".",
+    reqs_py=["conducto", "tensorflow", "keras"],
+)
+
+
 def main() -> co.Serial:
     path = "/conducto/data/pipeline"
-    root = co.Serial(image = get_image())
-    
+    root = co.Serial(image=img)
+
     # Get data from keras for testing and training
     root["Get Data"] = co.Exec(run_whole_thing, f"{path}/raw")
 
     return root
+
 
 def run_whole_thing(out_dir):
     os.makedirs(out_dir, exist_ok=True)
@@ -34,9 +43,10 @@ def run_whole_thing(out_dir):
     if not data_dir.exists():
         # Get the files from external source and put them in an accessible directory
         tf.keras.utils.get_file(
-            'mini_speech_commands.zip',
+            "mini_speech_commands.zip",
             origin="http://storage.googleapis.com/download.tensorflow.org/data/mini_speech_commands.zip",
-            extract=True)
+            extract=True,
+        )
 
     # Convert the binary audio file to a tensor
     def decode_audio(audio_binary):
@@ -68,8 +78,7 @@ def run_whole_thing(out_dir):
         # same length
         waveform = tf.cast(waveform, tf.float32)
         equal_length = tf.concat([waveform, zero_padding], 0)
-        spectrogram = tf.signal.stft(
-            equal_length, frame_length=255, frame_step=128)
+        spectrogram = tf.signal.stft(equal_length, frame_length=255, frame_step=128)
 
         spectrogram = tf.abs(spectrogram)
 
@@ -86,23 +95,23 @@ def run_whole_thing(out_dir):
     def preprocess_dataset(files, autotune, commands):
         # Creates the dataset
         files_ds = tf.data.Dataset.from_tensor_slices(files)
-        
+
         # Matches audio files with correct labels
-        output_ds = files_ds.map(get_waveform_and_label,
-                                num_parallel_calls=autotune)
+        output_ds = files_ds.map(get_waveform_and_label, num_parallel_calls=autotune)
 
         # Matches audio file images to the correct labels
         output_ds = output_ds.map(
-            get_spectrogram_and_label_id,  num_parallel_calls=autotune)
+            get_spectrogram_and_label_id, num_parallel_calls=autotune
+        )
 
         return output_ds
 
     # Get all of the commands for the audio files
     commands = np.array(tf.io.gfile.listdir(str(data_dir)))
-    commands = commands[commands != 'README.md']
+    commands = commands[commands != "README.md"]
 
     # Get a list of all the files in the directory
-    filenames = tf.io.gfile.glob(str(data_dir) + '/*/*')
+    filenames = tf.io.gfile.glob(str(data_dir) + "/*/*")
 
     # Shuffle the file names so that random bunches can be used as the training, testing, and validation sets
     filenames = tf.random.shuffle(filenames)
@@ -110,7 +119,7 @@ def run_whole_thing(out_dir):
     # Create the list of files for training data
     train_files = filenames[:6400]
     # Create the list of files for validation data
-    validation_files = filenames[6400: 6400 + 800]
+    validation_files = filenames[6400 : 6400 + 800]
     # Create the list of files for test data
     test_files = filenames[-800:]
 
@@ -118,15 +127,14 @@ def run_whole_thing(out_dir):
 
     # Get the converted audio files for training the model
     files_ds = tf.data.Dataset.from_tensor_slices(train_files)
-    waveform_ds = files_ds.map(
-        get_waveform_and_label, num_parallel_calls=autotune)
+    waveform_ds = files_ds.map(get_waveform_and_label, num_parallel_calls=autotune)
     spectrogram_ds = waveform_ds.map(
-        get_spectrogram_and_label_id, num_parallel_calls=autotune)
+        get_spectrogram_and_label_id, num_parallel_calls=autotune
+    )
 
     # Preprocess the training, test, and validation datasets
     train_ds = preprocess_dataset(train_files, autotune, commands)
-    validation_ds = preprocess_dataset(
-        validation_files, autotune, commands)
+    validation_ds = preprocess_dataset(validation_files, autotune, commands)
     test_ds = preprocess_dataset(test_files, autotune, commands)
 
     # Batch datasets for training and validation
@@ -147,28 +155,29 @@ def run_whole_thing(out_dir):
     norm_layer = preprocessing.Normalization()
     norm_layer.adapt(spectrogram_ds.map(lambda x, _: x))
 
-    model = models.Sequential([
-        layers.Input(shape=input_shape),
-        preprocessing.Resizing(32, 32),
-        norm_layer,
-        layers.Conv2D(32, 3, activation='relu'),
-        layers.Conv2D(64, 3, activation='relu'),
-        layers.MaxPooling2D(),
-        layers.Dropout(0.25),
-        layers.Flatten(),
-        layers.Dense(128, activation='relu'),
-        layers.Dropout(0.5),
-        layers.Dense(num_labels),
-    ])
+    model = models.Sequential(
+        [
+            layers.Input(shape=input_shape),
+            preprocessing.Resizing(32, 32),
+            norm_layer,
+            layers.Conv2D(32, 3, activation="relu"),
+            layers.Conv2D(64, 3, activation="relu"),
+            layers.MaxPooling2D(),
+            layers.Dropout(0.25),
+            layers.Flatten(),
+            layers.Dense(128, activation="relu"),
+            layers.Dropout(0.5),
+            layers.Dense(num_labels),
+        ]
+    )
 
     model.summary()
 
     # Configure built model with losses and metrics
     model.compile(
         optimizer=tf.keras.optimizers.Adam(),
-        loss=tf.keras.losses.SparseCategoricalCrossentropy(
-            from_logits=True),
-        metrics=['accuracy'],
+        loss=tf.keras.losses.SparseCategoricalCrossentropy(from_logits=True),
+        metrics=["accuracy"],
     )
 
     # Finally train the model and return info about each epoch
@@ -197,17 +206,12 @@ def run_whole_thing(out_dir):
 
     test_acc = sum(y_pred == y_true) / len(y_true)
 
-    print(f'Test set accuracy: {test_acc:.0%}')
+    print(f"Test set accuracy: {test_acc:.0%}")
+
 
 ###
 # Pipeline Helper functions
 ###
-def get_image():
-    return co.Image(
-        "python:3.8-slim",
-        copy_dir=".",
-        reqs_py=["conducto", "tensorflow", "keras"],
-    )
 
 if __name__ == "__main__":
     co.main(default=main)
