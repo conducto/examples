@@ -1,0 +1,2 @@
+Six yeast genomes from https://www.ncbi.nlm.nih.gov/genome/
+A list of S. Cerevisiae genes from  https://www.yeastgenome.org/search?q=orf_coding_all.20150113.fasta.gz&is_quick=true
