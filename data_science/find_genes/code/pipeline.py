@@ -28,8 +28,7 @@ def download() -> co.Exec:
 
     # Exec nodes run commands or call functions in those environments.
     return co.Exec(
-        f"wget -NcP {data_dir} http://192.168.90.13:8887/genedata.zip",
-        #f"wget -NcP {data_dir} https://conducto.com/demo/genedata.zip",
+        f"wget -NcP {data_dir} https://github.com/conducto/examples/raw/drafts/blast/data_science/find_genes/data/genedata.zip",
         image=img,
     )
 
