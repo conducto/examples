@@ -79,7 +79,7 @@ def process_data(dataset, queries="S288C", data_dir=Path("/conducto/data/pipelin
     # unzip payload if not already
     if not (genome_file.exists() and genes_file.exists()):
         shutil.unpack_archive(data_dir / zip_file, data_dir)
-        print("unzipped {zip_file} into {data_dir}")
+        print(f"unzipped {zip_file} into {data_dir}")
 
     print(f"searching {genome_file} for genes found in {genes_file}")
 
@@ -139,6 +139,7 @@ def process_data(dataset, queries="S288C", data_dir=Path("/conducto/data/pipelin
                                 genome_name,
                                 genome_file,
                                 record,
+                                hsp,
                                 key,
                             ]
                         )
@@ -156,6 +157,7 @@ def process_data(dataset, queries="S288C", data_dir=Path("/conducto/data/pipelin
             "genome_name",
             "genome_file",
             "record",
+            "hsp",
             "key",
         ],
     )
