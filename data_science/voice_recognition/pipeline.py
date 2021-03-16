@@ -1,24 +1,20 @@
 import os
 import pathlib
 
-import numpy as np
-import tensorflow as tf
-
-from tensorflow.keras.layers.experimental import preprocessing
-from tensorflow.keras import layers
-from tensorflow.keras import models
 import conducto as co
-
-# PyTorch example: https://pytorch.org/tutorials/beginner/audio_preprocessing_tutorial.html
 
 # Convert the binary audio file to a tensor
 def decode_audio(audio_binary):
+  import tensorflow as tf
+
   audio, _ = tf.audio.decode_wav(audio_binary)
 
   return tf.squeeze(audio, axis=-1)
 
 # Get the label (yes, no, up, down, etc) for an audio file.
 def get_label(file_path):
+  import tensorflow as tf
+
   parts = tf.strings.split(file_path, os.path.sep)
 
   # Note: You'll use indexing here instead of tuple unpacking to enable this to work in a TensorFlow graph.
@@ -26,40 +22,22 @@ def get_label(file_path):
 
 # Create a tuple that has the labeled audio files
 def get_waveform_and_label(file_path):
+  import tensorflow as tf
+
   label = get_label(file_path)
   audio_binary = tf.io.read_file(file_path)
   waveform = decode_audio(audio_binary)
 
   return waveform, label
 
-# Convert audio files to images with PyTorch
-def get_spectrogram_pytorch(
-    n_fft = 400,
-    win_len = None,
-    hop_len = None,
-    power = 2.0,
-    waveform = None
-):
-  import torchaudio.transforms as T
-
-  spectrogram = T.Spectrogram(
-      n_fft=n_fft,
-      win_length=win_len,
-      hop_length=hop_len,
-      center=True,
-      pad_mode="reflect",
-      power=power,
-  )
-
-  return spectrogram(waveform)
-
 # Convert audio files to images
 def get_spectrogram(waveform):
+  import tensorflow as tf
+
   # Padding for files with less than 16000 samples
   zero_padding = tf.zeros([16000] - tf.shape(waveform), dtype=tf.float32)
 
-  # Concatenate audio with padding so that all audio clips will be of the
-  # same length
+  # Concatenate audio with padding so that all audio clips will be of the same length
   waveform = tf.cast(waveform, tf.float32)
   equal_length = tf.concat([waveform, zero_padding], 0)
   spectrogram = tf.signal.stft(
@@ -71,6 +49,8 @@ def get_spectrogram(waveform):
 
 # Label the images created from the audio files and return a tuple
 def get_spectrogram_and_label_id(audio, label, commands):
+  import tensorflow as tf
+
   spectrogram = get_spectrogram(audio)
   spectrogram = tf.expand_dims(spectrogram, -1)
   label_id = tf.argmax(label == commands)
@@ -78,6 +58,8 @@ def get_spectrogram_and_label_id(audio, label, commands):
 
 # Preprocess any audio files
 def preprocess_dataset(files, autotune, commands):
+  import tensorflow as tf
+
   # Creates the dataset
   files_ds = tf.data.Dataset.from_tensor_slices(files)
 
@@ -91,43 +73,132 @@ def preprocess_dataset(files, autotune, commands):
 
   return output_ds
 
+# Convert audio files to images with PyTorch
+def get_spectrogram_pytorch(waveform):
+  import torch
+  import torchaudio.transforms as T
+
+  spectrogram = T.Spectrogram(
+      n_fft=400,
+      win_length=None,
+      hop_length=None,
+      center=True,
+      pad_mode="reflect",
+      power=2.0,
+  )
+
+  return spectrogram(waveform)
+
+# Extract features for sklearn
+def extract_feature(file_name, **kwargs):
+  import soundfile
+  import librosa
+  import glob
+  import numpy as np
+
+  """
+  Extract feature from audio file `file_name`
+    Features supported:
+      - MFCC (mfcc)
+      - Chroma (chroma)
+      - MEL Spectrogram Frequency (mel)
+      - Contrast (contrast)
+      - Tonnetz (tonnetz)
+    e.g:
+    `features = extract_feature(path, mel=True, mfcc=True)`
+  """
+  mfcc = kwargs.get("mfcc")
+  chroma = kwargs.get("chroma")
+  mel = kwargs.get("mel")
+  contrast = kwargs.get("contrast")
+  tonnetz = kwargs.get("tonnetz")
+
+  with soundfile.SoundFile(file_name) as sound_file:
+    X = sound_file.read(dtype="float32")
+    sample_rate = sound_file.samplerate
+
+    if chroma or contrast:
+      stft = np.abs(librosa.stft(X))
+
+    result = np.array([])
+
+    if mfcc:
+      mfccs = np.mean(librosa.feature.mfcc(y=X, sr=sample_rate, n_mfcc=40).T, axis=0)
+      result = np.hstack((result, mfccs))
+
+    if chroma:
+      chroma = np.mean(librosa.feature.chroma_stft(S=stft, sr=sample_rate).T,axis=0)
+      result = np.hstack((result, chroma))
+
+    if mel:
+      mel = np.mean(librosa.feature.melspectrogram(X, sr=sample_rate).T,axis=0)
+      result = np.hstack((result, mel))
+
+    if contrast:
+      contrast = np.mean(librosa.feature.spectral_contrast(S=stft, sr=sample_rate).T,axis=0)
+      result = np.hstack((result, contrast))
+
+    if tonnetz:
+      tonnetz = np.mean(librosa.feature.tonnetz(y=librosa.effects.harmonic(X), sr=sample_rate).T,axis=0)
+      result = np.hstack((result, tonnetz))
+
+  return result
+
+# Load data for sklearn
+def load_data(filenames):
+  X, y = [], []
+  for file in filenames:
+    # get the command label
+    label = file.decode('UTF-8').split("/")[6]
+
+    # Get the waveform
+    waveform = extract_feature(file, mfcc=True, chroma=True, mel=True)
+
+    # add to data
+    X.append(waveform)
+    y.append(label)
+
+  return X, y
+
 ###
 # Main Pipeline
 ###
 def main() -> co.Serial:
-    path = "/conducto/data/pipeline"
-    root = co.Serial(image=get_image())
+  path = "/conducto/data/pipeline"
+  root = co.Serial(image=get_image())
 
-    # Get data from keras for testing and training
-    root["Get Data"] = co.Exec(get_data, f"{path}/raw")
+  # Get data from keras for testing and training
+  root["Get Data"] = co.Exec(get_data, "/conducto/data/user/raw")
 
-    root["Split"] = co.Exec(
-        split_data,
-        input_path=f"{path}/raw/mini_speech_commands",
-        train_path=f"{path}/train",
-        test_path=f"{path}/test",
-        validate_path=f"{path}/validate",
-        commands_path=f"{path}/commands"
-    )
+  root["Split"] = co.Exec(
+      split_data,
+      input_path="/conducto/data/user/raw/mini_speech_commands",
+      train_path=f"{path}/train",
+      test_path=f"{path}/test",
+      validate_path=f"{path}/validate",
+      commands_path=f"{path}/commands"
+  )
 
-    root["Model"] = co.Exec(fit_model, train_path=f"{path}/train", validate_path=f"{path}/validate", model_path=f"{path}/model", commands_path=f"{path}/commands")
+  root["Models"] = co.Parallel()
 
-    root["Test"] = co.Exec(test_model, model_path=f"{path}/model", test_path=f"{path}/test", commands_file=f"{path}/commands")
+  for tool in ["tensorflow", "pytorch", "sklearn"]:
+    model_node = co.Serial()
 
-    # root["Models"] = co.Parallel()
-    # for algo in ["CNN"]:
-    #     model_node = co.Serial()
-    #     model_node["Fit"] = co.Exec(
-    #         fit_model, data=f"{path}/train", model=f"{path}/{algo}")
-    #     model_node["Test"] = co.Exec(
-    #         test_model, data=f"{path}/test", model=f"{path}/{algo}", result=f"{path}/result/{algo}")
-    #     root["Models"][algo] = model_node
+    root["Models"][tool] = model_node
 
-    # root["Summary"] = co.Exec(summarize_model, results=f"{path}/result")
+    model_node[f"Build and train {tool} model"] = co.Exec(
+      fit_model, tool=tool, train_path=f"{path}/train", validate_path=f"{path}/validate", model_path=f"{path}/model/{tool}", commands_path=f"{path}/commands")
 
-    return root
+    model_node[f"Test {tool} model"] = co.Exec(
+      test_model, tool=tool, test_path=f"{path}/test", model_path=f"{path}/model/{tool}", commands_path=f"{path}/commands")
+
+  root["Summary"] = co.Exec(summarize_model)
+
+  return root
 
 def get_data(path):
+  import tensorflow as tf
+  
   if os.path.exists(path):
     print("Data already downloaded")
   else:
@@ -141,50 +212,68 @@ def get_data(path):
     )
     print("data in:", downloaded_path)
 
-
 def split_data(input_path, train_path, test_path, validate_path, commands_path):
-    # Get a list of all the files in the directory
-    filenames = tf.io.gfile.glob(input_path + '/*/*')
+  import tensorflow as tf
+  import numpy as np
 
-    # Get all of the commands for the audio files
-    commands = np.array(tf.io.gfile.listdir(input_path))
-    commands = commands[commands != 'README.md']
-    
-    # Shuffle the file names so that random bunches can be used as the training, testing, and validation sets
-    filenames = tf.random.shuffle(filenames)
+  # Get a list of all the files in the directory
+  filenames = tf.io.gfile.glob(input_path + '/*/*')
 
-    # Create the list of files for training data
-    train_files = filenames[:6400]
-    # Create the list of files for validation data
-    validation_files = filenames[6400: 6400 + 800]
-    # Create the list of files for test data
-    test_files = filenames[-800:]
+  # Get all of the commands for the audio files
+  commands = np.array(tf.io.gfile.listdir(input_path))
+  commands = commands[commands != 'README.md']
+  
+  # Shuffle the file names so that random bunches can be used as the training, testing, and validation sets
+  filenames = tf.random.shuffle(filenames)
 
-    import pickle
+  # Create the list of files for training data
+  train_files = filenames[:6400]
+  # Create the list of files for validation data
+  validation_files = filenames[6400: 6400 + 800]
+  # Create the list of files for test data
+  test_files = filenames[-800:]
 
-    with open(train_path, "wb") as f:
-        pickle.dump(train_files, f)
-
-    print("split training data")
-
-    with open(test_path, "wb") as f:
-        pickle.dump(test_files, f)
-
-    print("split test data")
-
-    with open(validate_path, "wb") as f:
-        pickle.dump(validation_files, f)
-
-    print("split validation data")
-
-    with open(commands_path, "wb") as f:
-        pickle.dump(commands, f)
-
-    print("split commands data")
-
-
-def fit_model(train_path, validate_path, model_path, commands_path):
   import pickle
+
+  with open(train_path, "wb") as f:
+    pickle.dump(train_files, f)
+
+  print("split training data")
+
+  with open(test_path, "wb") as f:
+    pickle.dump(test_files, f)
+
+  print("split test data")
+
+  with open(validate_path, "wb") as f:
+    pickle.dump(validation_files, f)
+
+  print("split validation data")
+
+  with open(commands_path, "wb") as f:
+    pickle.dump(commands, f)
+
+  print("split commands data")
+
+def fit_model(tool, train_path, validate_path, model_path, commands_path):
+  print(f"current tool: {tool}")
+  if tool == "tensorflow":
+    fit_model_tensorflow(train_path, validate_path, model_path, commands_path)
+  elif tool == "pytorch":
+    fit_model_pytorch(train_path, validate_path, model_path, commands_path)
+  elif tool == "sklearn":
+    fit_model_sklearn(train_path, validate_path, model_path, commands_path)
+  else:
+    print(f"current tool: {tool}")
+
+def fit_model_tensorflow(train_path, validate_path, model_path, commands_path):
+  import pickle
+  import numpy as np
+  import tensorflow as tf
+
+  from tensorflow.keras.layers.experimental import preprocessing
+  from tensorflow.keras import layers
+  from tensorflow.keras import models
 
   with open(commands_path, "rb") as f:
     commands = pickle.load(f)
@@ -194,6 +283,8 @@ def fit_model(train_path, validate_path, model_path, commands_path):
 
   with open(validate_path, "rb") as f:
     validation_files = pickle.load(f)
+
+  print(train_files[0])
     
   # Set seed for experiment reproducibility
   seed = 55
@@ -272,27 +363,148 @@ def fit_model(train_path, validate_path, model_path, commands_path):
   model_json = model.to_json()
 
   with open(model_path, "wb") as f:
-      pickle.dump(model_json, f)
+    pickle.dump(model_json, f)
 
-def fit_model_pytorch(train_path, validation_path, model_path, commands_file):
+def fit_model_pytorch(train_path, validate_path, model_path, commands_path):
+  import pickle
   import torch
+  import torch.nn as nn
+  import torch.nn.functional as Fnn
+  import torch.optim as optim
   import torchaudio
   import torchaudio.functional as F
-  import torchaudio.transforms as T
-  import pickle
 
-  with open(commands_file, "rb") as f:
+  with open(commands_path, "rb") as f:
     commands = pickle.load(f)
 
   with open(train_path, "rb") as f:
     train_files = pickle.load(f)
 
-  with open(validation_path, "rb") as f:
+  with open(validate_path, "rb") as f:
     validation_files = pickle.load(f)
 
+  print("starting to convert training and validation data to pytorch format")
 
-def test_model(model_path, test_path, commands_file):
+  # Return an array of tuples with the waveform and sample rate
+  train_data = train_files.map(torchaudio.load)
+
+  # Returns an array of spectrograms
+  spectrograms = train_data.map(lambda waveform, sample_rate: get_spectrogram_pytorch(waveform))
+
+  # Returns an array of spectrograms with labels
+
+  # Class that defines the CNN model in PyTorch
+  class PyTorchNet:
+    def __init__(self):
+      super(PyTorchNet, self).__init__()
+      self.conv1 = nn.Conv2d(3, 6, 5)
+      self.pool = nn.MaxPool2d(2, 2)
+      self.conv2 = nn.Conv2d(6, 16, 5)
+      self.fc1 = nn.Linear(16 * 5 * 5, 120)
+      self.fc2 = nn.Linear(120, 84)
+      self.fc3 = nn.Linear(84, 10)
+
+    def forward(self, x):
+      x = self.pool(Fnn.relu(self.conv1(x)))
+      x = self.pool(Fnn.relu(self.conv2(x)))
+      x = x.view(-1, 16 * 5 * 5)
+      x = Fnn.relu(self.fc1(x))
+      x = Fnn.relu(self.fc2(x))
+      x = self.fc3(x)
+      return x
+
+    net = PyTorchNet()
+
+  # Creates the CNN
+  model = PyTorchNet()
+
+  # Defines the loss function and optimizer for the model
+  criterion = nn.CrossEntropyLoss()
+  optimizer = optim.SGD(model.parameters(), lr=0.001, momentum=0.9)
+
+  # Train the model with the training data
+  for epoch in range(2):  # loop over the dataset multiple times
+    running_loss = 0.0
+    for i, data in enumerate(spectrograms, 0):
+      # get the inputs; data is a list of [inputs, labels]
+      inputs, labels = data
+
+      # zero the parameter gradients
+      optimizer.zero_grad()
+
+      # forward + backward + optimize
+      outputs = model(inputs)
+      loss = criterion(outputs, labels)
+      loss.backward()
+      optimizer.step()
+
+      # print statistics
+      running_loss += loss.item()
+      if i % 2000 == 1999:    # print every 2000 mini-batches
+        print('[%d, %5d] loss: %.3f' %
+              (epoch + 1, i + 1, running_loss / 2000))
+        running_loss = 0.0
+  
+  # Save model
+  torch.save(model.state_dict(), model_path)
+
+def fit_model_sklearn(train_path, validate_path, model_path, commands_path):
   import pickle
+  from sklearn.neural_network import MLPClassifier
+
+  with open(commands_path, "rb") as f:
+    commands = pickle.load(f)
+
+  with open(train_path, "rb") as f:
+    train_files = pickle.load(f)
+
+  print(train_files)
+
+  formatted_train_files = train_files.numpy()
+
+  X_train, y_train = load_data(formatted_train_files)
+    
+  print("got training data")
+
+  # Best model, determined by a grid search
+  model_params = {
+    'alpha': 0.01,
+    'batch_size': 256,
+    'epsilon': 1e-08, 
+    'hidden_layer_sizes': (300,), 
+    'learning_rate': 'adaptive', 
+    'max_iter': 500, 
+  }
+
+  print("training model")
+
+  # Initialize Multi Layer Perceptron classifier with best initial parameters
+  model = MLPClassifier(**model_params)
+
+  # Train the model
+  model.fit(X_train, y_train)
+
+  print("saving model")
+
+  with open(model_path, "wb") as f:
+    pickle.dump(model, f)
+
+def test_model(tool, test_path, model_path, commands_path):
+  print(f"current tool: {tool}")
+  if tool == "tensorflow":
+    test_model_tensorflow(model_path, test_path, commands_path)
+  elif tool == "pytorch":
+    test_model_pytorch(model_path, test_path)
+  elif tool == "sklearn":
+    test_model_sklearn(model_path, test_path)
+  else:
+    print(f"current tool: {tool}")
+
+def test_model_tensorflow(model_path, test_path, commands_file):
+  import pickle
+  import numpy as np
+  import tensorflow as tf
+
   from keras.models import model_from_json
 
   with open(model_path, "rb") as f:
@@ -329,23 +541,73 @@ def test_model(model_path, test_path, commands_file):
 
   print(f'Test set accuracy: {test_acc:.0%}')
 
+def test_model_pytorch(model_path, test_path):
+  import torch
+  import torchaudio
+
+  # Load saved model
+  model = PyTorchNet()
+  model.load_state_dict(torch.load(model_path))
+
+  import pickle
+
+  with open(test_path, "rb") as f:
+    test_files = pickle.load(f)
+
+  # Return an array of tuples with the waveform and sample rate
+  test_data = test_files.map(torchaudio.load)
+
+  # Returns an array of spectrograms
+  test_spectrograms = test_data.map(lambda waveform, sample_rate: get_spectrogram_pytorch(waveform))
+
+  # Test the model
+  correct = 0
+  total = 0
+  with torch.no_grad():
+    for data in test_files:
+      images, labels = test_spectrograms
+      outputs = model(images)
+      _, predicted = torch.max(outputs.data, 1)
+      total += labels.size(0)
+      correct += (predicted == labels).sum().item()
+
+  print('Accuracy of the network on the 10000 test images: %d %%' % (100 * correct / total))
+
+def test_model_sklearn(model_path, test_path):
+  import pickle
+  from sklearn.metrics import accuracy_score
+
+  # Load saved model
+  with open(model_path, "rb") as f:
+    model = pickle.load(f)
+
+  with open(test_path, "rb") as f:
+    test_files = pickle.load(f)
+
+  # Return the waveforms and labels for the test data
+  X_test, y_test = load_data(test_files.numpy())
+
+  # Test the model
+  y_pred = model.predict(X_test)
+
+  # Calculate the accuracy
+  accuracy = accuracy_score(y_true=y_test, y_pred=y_pred)
+
+  print("Accuracy: {:.2f}%".format(accuracy*100))
 
 def summarize_model():
-    return "Summarize model"
-
+    return "Summarized model"
 
 ###
 # Pipeline Helper functions
 ###
-
-
 def get_image():
-    return co.Image(
-        "python:3.8-slim",
-        copy_dir=".",
-        reqs_py=["conducto", "tensorflow", "keras", "torch", "torchaudio"],
-    )
-
+  return co.Image(
+    "ubuntu:groovy",
+    copy_dir=".",
+    reqs_py=["conducto", "keras", "librosa", "sklearn", "soundfile", "tensorflow", "torch", "torchaudio"],
+    reqs_packages=["libsndfile1"]
+  )
 
 if __name__ == "__main__":
-    co.main(default=main)
+  co.main(default=main)
