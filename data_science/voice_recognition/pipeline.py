@@ -386,34 +386,64 @@ def fit_model_pytorch(train_path, validate_path, model_path, commands_path):
   print("starting to convert training and validation data to pytorch format")
 
   # Return an array of tuples with the waveform and sample rate
-  train_data = train_files.map(torchaudio.load)
+  train_data_converted = train_files.numpy().tolist()
+
+  train_data = []
+  labels = []
+  for file in train_data_converted:
+    train_data.append(torchaudio.load(file))
+    labels.append(file.decode("utf-8").split("/")[6])
 
   # Returns an array of spectrograms
-  spectrograms = train_data.map(lambda waveform, sample_rate: get_spectrogram_pytorch(waveform))
+  spectrograms = []
+  for waveform, sample_rate in train_data:
+    spectrograms.append(get_spectrogram_pytorch(waveform))
 
+  print("Made spectrograms...")
+
+  labeled_spectrograms = []
   # Returns an array of spectrograms with labels
+  for i, waveform in enumerate(spectrograms):
+    labeled_spectrograms.append([waveform, labels[i]])
+
+  print("Labelled spectrograms...")
 
   # Class that defines the CNN model in PyTorch
-  class PyTorchNet:
-    def __init__(self):
-      super(PyTorchNet, self).__init__()
-      self.conv1 = nn.Conv2d(3, 6, 5)
-      self.pool = nn.MaxPool2d(2, 2)
-      self.conv2 = nn.Conv2d(6, 16, 5)
-      self.fc1 = nn.Linear(16 * 5 * 5, 120)
-      self.fc2 = nn.Linear(120, 84)
-      self.fc3 = nn.Linear(84, 10)
+  class PyTorchNet(nn.Module):
+    def __init__(self, n_input=1, n_output=35, stride=16, n_channel=32):
+      super().__init__()
+      self.conv1 = nn.Conv1d(n_input, n_channel, kernel_size=80, stride=stride)
+      self.bn1 = nn.BatchNorm1d(n_channel)
+      self.pool1 = nn.MaxPool1d(4)
+      self.conv2 = nn.Conv1d(n_channel, n_channel, kernel_size=3)
+      self.bn2 = nn.BatchNorm1d(n_channel)
+      self.pool2 = nn.MaxPool1d(4)
+      self.conv3 = nn.Conv1d(n_channel, 2 * n_channel, kernel_size=3)
+      self.bn3 = nn.BatchNorm1d(2 * n_channel)
+      self.pool3 = nn.MaxPool1d(4)
+      self.conv4 = nn.Conv1d(2 * n_channel, 2 * n_channel, kernel_size=3)
+      self.bn4 = nn.BatchNorm1d(2 * n_channel)
+      self.pool4 = nn.MaxPool1d(4)
+      self.fc1 = nn.Linear(2 * n_channel, n_output)
 
     def forward(self, x):
-      x = self.pool(Fnn.relu(self.conv1(x)))
-      x = self.pool(Fnn.relu(self.conv2(x)))
-      x = x.view(-1, 16 * 5 * 5)
-      x = Fnn.relu(self.fc1(x))
-      x = Fnn.relu(self.fc2(x))
-      x = self.fc3(x)
-      return x
+      x = self.conv1(x)
+      x = Fnn.relu(self.bn1(x))
+      x = self.pool1(x)
+      x = self.conv2(x)
+      x = Fnn.relu(self.bn2(x))
+      x = self.pool2(x)
+      x = self.conv3(x)
+      x = Fnn.relu(self.bn3(x))
+      x = self.pool3(x)
+      x = self.conv4(x)
+      x = Fnn.relu(self.bn4(x))
+      x = self.pool4(x)
+      x = Fnn.avg_pool1d(x, x.shape[-1])
+      x = x.permute(0, 2, 1)
+      x = self.fc1(x)
 
-    net = PyTorchNet()
+      return Fnn.log_softmax(x, dim=2)
 
   # Creates the CNN
   model = PyTorchNet()
@@ -423,18 +453,19 @@ def fit_model_pytorch(train_path, validate_path, model_path, commands_path):
   optimizer = optim.SGD(model.parameters(), lr=0.001, momentum=0.9)
 
   # Train the model with the training data
+  model.train()
   for epoch in range(2):  # loop over the dataset multiple times
     running_loss = 0.0
-    for i, data in enumerate(spectrograms, 0):
-      # get the inputs; data is a list of [inputs, labels]
-      inputs, labels = data
+    for i, data in enumerate(labeled_spectrograms, 0):
+      # get the input; data is a list of [waveform, label]
+      waveform, label = data
 
       # zero the parameter gradients
       optimizer.zero_grad()
 
       # forward + backward + optimize
-      outputs = model(inputs)
-      loss = criterion(outputs, labels)
+      output = model(waveform)
+      loss = criterion(output, label)
       loss.backward()
       optimizer.step()
 
